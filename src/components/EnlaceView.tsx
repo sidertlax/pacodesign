@@ -2,6 +2,7 @@ import { EnlaceEditForm } from './EnlaceEditForm';
 import { EnlaceCargaGasto } from './EnlaceCargaGasto';
 import { EnlaceCargaIndicadores } from './EnlaceCargaIndicadores';
 import { EnlaceCargaNormatividad } from './EnlaceCargaNormatividad';
+import { EnlaceCargaObraPublica } from './EnlaceCargaObraPublica';
 import { useState } from 'react';
 import cgpiLogo from 'figma:asset/2d625ad7f36a46709a1af6e4574d72029b82c6ea.png';
 import { 
@@ -176,7 +177,7 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
       descripcion: 'Seguimiento de proyectos de infraestructura (ObraEvalúa)',
       icon: Hammer,
       color: '#582672',
-      disponible: false,
+      disponible: true,
     },
   ];
 
@@ -569,11 +570,7 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
     }
 
     if (activeModule === 'obra') {
-      return renderEmptyState(
-        'CARGA DE OBRA PÚBLICA',
-        'Aquí podrás dar seguimiento a los proyectos de infraestructura y obra pública. Este módulo estará disponible próximamente.',
-        Hammer
-      );
+      return <EnlaceCargaObraPublica userName={username} onVolverInicio={() => setActiveModule('menu')} />;
     }
   };
 

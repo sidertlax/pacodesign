@@ -11,6 +11,7 @@ import { IndicadoresGeneralModule } from "./components/IndicadoresGeneralModule"
 import { IndicadoresModule } from "./components/IndicadoresModule";
 import { CompromisosModule } from "./components/CompromisosModule";
 import { NormatividadModule } from "./components/NormatividadModule";
+import { AdminObraPublicaModule } from "./components/AdminObraPublicaModule";
 import {
   DollarSign,
   TrendingUp,
@@ -415,6 +416,21 @@ export default function App() {
         }}
         dependencyId={targetDep.id}
         dependencyName={targetDep.name}
+      />
+    );
+  }
+
+  // Si está en la vista del Módulo de Obra Pública
+  if (currentView === "obra") {
+    return (
+      <AdminObraPublicaModule
+        onBack={() => {
+          if (moduleViewDependency) {
+            setSelectedDependency(moduleViewDependency);
+            setModuleViewDependency(null);
+          }
+          setCurrentView("dashboard");
+        }}
       />
     );
   }

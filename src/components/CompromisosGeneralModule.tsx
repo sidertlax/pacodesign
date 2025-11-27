@@ -57,21 +57,21 @@ interface CompromisosGeneralModuleProps {
 
 // Municipios de Tlaxcala con coordenadas aproximadas para el mapa
 const municipiosTlaxcala = [
-  { name: 'Tlaxcala', x: 50, y: 45, compromisos: 15, avance: 78, presupuesto: 45000000 },
-  { name: 'Apizaco', x: 45, y: 30, compromisos: 12, avance: 65, presupuesto: 38000000 },
-  { name: 'Huamantla', x: 75, y: 50, compromisos: 10, avance: 82, presupuesto: 32000000 },
-  { name: 'Chiautempan', x: 42, y: 50, compromisos: 8, avance: 55, presupuesto: 28000000 },
-  { name: 'Tlaxco', x: 60, y: 15, compromisos: 7, avance: 70, presupuesto: 25000000 },
-  { name: 'Calpulalpan', x: 25, y: 20, compromisos: 6, avance: 45, presupuesto: 22000000 },
-  { name: 'Zacatelco', x: 40, y: 60, compromisos: 9, avance: 88, presupuesto: 30000000 },
-  { name: 'San Pablo del Monte', x: 35, y: 55, compromisos: 8, avance: 92, presupuesto: 27000000 },
-  { name: 'Papalotla de Xicohténcatl', x: 48, y: 38, compromisos: 5, avance: 60, presupuesto: 18000000 },
-  { name: 'Contla de Juan Cuamatzi', x: 38, y: 48, compromisos: 6, avance: 75, presupuesto: 20000000 },
-  { name: 'Apetatitlán de Antonio Carvajal', x: 52, y: 42, compromisos: 5, avance: 68, presupuesto: 19000000 },
-  { name: 'Xaloztoc', x: 70, y: 55, compromisos: 4, avance: 50, presupuesto: 15000000 },
-  { name: 'Ixtacuixtla de Mariano Matamoros', x: 55, y: 55, compromisos: 6, avance: 72, presupuesto: 21000000 },
-  { name: 'Tetla de la Solidaridad', x: 32, y: 52, compromisos: 4, avance: 80, presupuesto: 16000000 },
-  { name: 'Teolocholco', x: 43, y: 55, compromisos: 5, avance: 63, presupuesto: 17000000 },
+  { name: 'Tlaxcala', x: 50, y: 45, compromisos: 15, avance: 78, presupuesto: 45000000, metasImpacto: 28 },
+  { name: 'Apizaco', x: 45, y: 30, compromisos: 12, avance: 65, presupuesto: 38000000, metasImpacto: 22 },
+  { name: 'Huamantla', x: 75, y: 50, compromisos: 10, avance: 82, presupuesto: 32000000, metasImpacto: 18 },
+  { name: 'Chiautempan', x: 42, y: 50, compromisos: 8, avance: 55, presupuesto: 28000000, metasImpacto: 15 },
+  { name: 'Tlaxco', x: 60, y: 15, compromisos: 7, avance: 70, presupuesto: 25000000, metasImpacto: 14 },
+  { name: 'Calpulalpan', x: 25, y: 20, compromisos: 6, avance: 45, presupuesto: 22000000, metasImpacto: 12 },
+  { name: 'Zacatelco', x: 40, y: 60, compromisos: 9, avance: 88, presupuesto: 30000000, metasImpacto: 17 },
+  { name: 'San Pablo del Monte', x: 35, y: 55, compromisos: 8, avance: 92, presupuesto: 27000000, metasImpacto: 16 },
+  { name: 'Papalotla de Xicohténcatl', x: 48, y: 38, compromisos: 5, avance: 60, presupuesto: 18000000, metasImpacto: 10 },
+  { name: 'Contla de Juan Cuamatzi', x: 38, y: 48, compromisos: 6, avance: 75, presupuesto: 20000000, metasImpacto: 12 },
+  { name: 'Apetatitlán de Antonio Carvajal', x: 52, y: 42, compromisos: 5, avance: 68, presupuesto: 19000000, metasImpacto: 10 },
+  { name: 'Xaloztoc', x: 70, y: 55, compromisos: 4, avance: 50, presupuesto: 15000000, metasImpacto: 8 },
+  { name: 'Ixtacuixtla de Mariano Matamoros', x: 55, y: 55, compromisos: 6, avance: 72, presupuesto: 21000000, metasImpacto: 12 },
+  { name: 'Tetla de la Solidaridad', x: 32, y: 52, compromisos: 4, avance: 80, presupuesto: 16000000, metasImpacto: 8 },
+  { name: 'Teolocholco', x: 43, y: 55, compromisos: 5, avance: 63, presupuesto: 17000000, metasImpacto: 10 },
 ];
 
 // Ejes del Plan Estatal
@@ -168,6 +168,7 @@ export function CompromisosGeneralModule({
   const [filterAño, setFilterAño] = useState('todos');
   const [filterEje, setFilterEje] = useState('todos');
   const [hoveredMunicipio, setHoveredMunicipio] = useState<string | null>(null);
+  const [selectedMunicipioMapa, setSelectedMunicipioMapa] = useState<string>('todos');
 
   // Calcular estadísticas
   const total = compromisos.length;
@@ -350,8 +351,8 @@ export function CompromisosGeneralModule({
             Resumen Ejecutivo
           </h2>
           
-          {/* Grid Bento: Compromisos a la izquierda, Presupuesto a la derecha */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Grid Bento: 3 columnas - Compromisos, Presupuesto, Metas */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Grupo 1: Compromisos - Bento Layout */}
             <Card className="hover:shadow-xl transition-all border-2 border-purple-100" style={{ background: 'linear-gradient(135deg, #58267205 0%, #58267210 100%)' }}>
               <CardHeader>
@@ -613,27 +614,151 @@ export function CompromisosGeneralModule({
                 </Card>
               </CardContent>
             </Card>
+
+            {/* Grupo 3: Metas Alcanzadas - Bento Layout */}
+            <Card className="hover:shadow-xl transition-all border-2 border-green-100" style={{ background: 'linear-gradient(135deg, #2E7D3205 0%, #2E7D3210 100%)' }}>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2" style={{ color: '#2E7D32', fontWeight: 'bold' }}>
+                  <CheckCircle2 className="w-5 h-5" />
+                  Metas Alcanzadas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Metas con mayor número de municipios impactados */}
+                <Card className="border-2 border-green-200 bg-white hover:shadow-lg transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3220' }}>
+                        <MapIcon className="w-5 h-5" style={{ color: '#2E7D32' }} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Mayor Cobertura Geográfica</p>
+                        <p className="text-sm" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                          Ampliación de red de agua potable
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Municipios impactados:</span>
+                        <Badge style={{ backgroundColor: '#2E7D3220', color: '#2E7D32', fontWeight: 'bold' }}>
+                          12 municipios
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Beneficiarios:</span>
+                        <span className="text-xs" style={{ fontWeight: 'bold' }}>45,230 personas</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Segunda meta destacada */}
+                <Card className="border border-green-200 bg-white hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3215' }}>
+                        <Users className="w-5 h-5" style={{ color: '#2E7D32' }} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Amplia Cobertura</p>
+                        <p className="text-sm" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                          Programa estatal de becas
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Municipios impactados:</span>
+                        <Badge style={{ backgroundColor: '#2E7D3215', color: '#2E7D32', fontWeight: 'bold' }}>
+                          11 municipios
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Beneficiarios:</span>
+                        <span className="text-xs" style={{ fontWeight: 'bold' }}>38,450 estudiantes</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Metas más constantes en municipios */}
+                <div className="pt-3 border-t">
+                  <p className="text-xs mb-3" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                    Metas Más Constantes por Municipio
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-green-50 rounded">
+                      <span className="text-xs">Tlaxcala</span>
+                      <Badge variant="outline" className="text-xs">28 metas</Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-green-50 rounded">
+                      <span className="text-xs">Apizaco</span>
+                      <Badge variant="outline" className="text-xs">22 metas</Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-green-50 rounded">
+                      <span className="text-xs">Huamantla</span>
+                      <Badge variant="outline" className="text-xs">18 metas</Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-green-50 rounded">
+                      <span className="text-xs">Zacatelco</span>
+                      <Badge variant="outline" className="text-xs">17 metas</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Estadística general */}
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-3">
+                    <div className="text-center">
+                      <p className="text-2xl mb-1" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                        {municipiosTlaxcala.reduce((sum, m) => sum + m.metasImpacto, 0)}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Total de metas implementadas en el estado
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
           </div>
         </motion.div>
 
-        {/* Mapa y Gráfica de barras */}
+        {/* Mapa de compromisos por municipio - Full Width */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
           className="mb-8"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-            {/* Mapa interactivo de Tlaxcala - 70% width */}
-            <Card className="lg:col-span-7 border-2 border-purple-200 hover:shadow-xl transition-all">
+          {/* Mapa interactivo de Tlaxcala - Full Width */}
+          <Card className="border-2 border-purple-200 hover:shadow-xl transition-all">
               <CardHeader>
-                <CardTitle className="text-xl flex items-center gap-2" style={{ color: '#582672', fontWeight: 'bold' }}>
-                  <MapIcon className="w-5 h-5" />
-                  Mapa de Compromisos por Municipio
-                </CardTitle>
-                <p className="text-sm text-gray-600">
-                  Avance promedio de compromisos por municipio — Cobertura geográfica estatal
-                </p>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-xl flex items-center gap-2" style={{ color: '#582672', fontWeight: 'bold' }}>
+                      <MapIcon className="w-5 h-5" />
+                      Mapa de Compromisos por Municipio
+                    </CardTitle>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Avance promedio de compromisos por municipio — Cobertura geográfica estatal
+                    </p>
+                  </div>
+                  <div className="w-64">
+                    <Select value={selectedMunicipioMapa} onValueChange={setSelectedMunicipioMapa}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar municipio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos los municipios</SelectItem>
+                        {municipiosTlaxcala.map(m => (
+                          <SelectItem key={m.name} value={m.name}>{m.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="relative w-full h-[450px] bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-gray-300 overflow-hidden shadow-inner">
@@ -648,31 +773,66 @@ export function CompromisosGeneralModule({
                     
                     {/* Municipios como círculos */}
                     <TooltipProvider>
-                      {municipiosTlaxcala.map((municipio) => (
+                      {municipiosTlaxcala
+                        .filter(m => selectedMunicipioMapa === 'todos' || m.name === selectedMunicipioMapa)
+                        .map((municipio) => (
                         <Tooltip key={municipio.name}>
                           <TooltipTrigger asChild>
                             <circle
                               cx={municipio.x}
                               cy={municipio.y}
-                              r={3 + (municipio.compromisos / 3)}
+                              r={selectedMunicipioMapa === municipio.name ? 8 : 3 + (municipio.compromisos / 3)}
                               fill={getMunicipioColor(municipio.avance)}
-                              stroke="white"
-                              strokeWidth="0.5"
+                              stroke={selectedMunicipioMapa === municipio.name ? '#582672' : 'white'}
+                              strokeWidth={selectedMunicipioMapa === municipio.name ? '1.5' : '0.5'}
                               className="cursor-pointer transition-all hover:r-8"
                               onMouseEnter={() => setHoveredMunicipio(municipio.name)}
                               onMouseLeave={() => setHoveredMunicipio(null)}
                               style={{
                                 filter: hoveredMunicipio === municipio.name ? 'brightness(1.2)' : 'none',
-                                opacity: hoveredMunicipio === municipio.name ? 1 : 0.85,
+                                opacity: hoveredMunicipio === municipio.name || selectedMunicipioMapa === municipio.name ? 1 : 0.85,
                               }}
                             />
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-xs">
-                              <p style={{ fontWeight: 'bold' }}>{municipio.name}</p>
-                              <p>Compromisos: {municipio.compromisos}</p>
-                              <p>Avance: {municipio.avance}%</p>
-                              <p>Presupuesto: ${(municipio.presupuesto / 1000000).toFixed(1)}M</p>
+                          <TooltipContent className="max-w-xs">
+                            <div className="space-y-2">
+                              <p className="text-sm" style={{ fontWeight: 'bold', color: '#582672' }}>{municipio.name}</p>
+                              <div className="space-y-1 text-xs">
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="text-gray-600">Compromisos:</span>
+                                  <span style={{ fontWeight: 'bold' }}>{municipio.compromisos}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="text-gray-600">Metas que impactaron:</span>
+                                  <Badge style={{ backgroundColor: '#2E7D3220', color: '#2E7D32', fontWeight: 'bold' }}>
+                                    {municipio.metasImpacto} metas
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="text-gray-600">Avance:</span>
+                                  <span style={{ fontWeight: 'bold', color: getMunicipioColor(municipio.avance) }}>
+                                    {municipio.avance}%
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="text-gray-600">Presupuesto:</span>
+                                  <span style={{ fontWeight: 'bold' }}>
+                                    ${(municipio.presupuesto / 1000000).toFixed(1)}M
+                                  </span>
+                                </div>
+                              </div>
+                              <Button 
+                                size="sm" 
+                                className="w-full mt-2"
+                                style={{ backgroundColor: '#582672' }}
+                                onClick={() => {
+                                  setFilterMunicipio(municipio.name);
+                                  setSelectedMunicipioMapa(municipio.name);
+                                }}
+                              >
+                                <ChevronRight className="w-4 h-4 mr-1" />
+                                Ver detalle del municipio
+                              </Button>
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -705,44 +865,6 @@ export function CompromisosGeneralModule({
                 </div>
               </CardContent>
             </Card>
-
-            {/* Gráfica de barras horizontales por dependencia - 30% width */}
-            <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2" style={{ color: '#582672', fontWeight: 'bold' }}>
-                  <Building2 className="w-5 h-5" />
-                  Top 10 Dependencias
-                </CardTitle>
-                <p className="text-xs text-gray-600">
-                  Por porcentaje de avance
-                </p>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={450}>
-                  <BarChart data={dependenciaData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis type="number" domain={[0, 100]} stroke="#6b7280" style={{ fontSize: '10px' }} />
-                    <YAxis type="category" dataKey="name" width={60} stroke="#6b7280" style={{ fontSize: '9px' }} />
-                    <RechartsTooltip 
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
-                              <p className="text-sm" style={{ fontWeight: 'bold' }}>{payload[0].payload.name.replace('Dep. ', 'Dependencia ')}</p>
-                              <p className="text-xs text-gray-600">Compromisos: {payload[0].payload.compromisos}</p>
-                              <p className="text-xs" style={{ color: '#582672', fontWeight: 'bold' }}>Avance: {payload[0].value}%</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Bar dataKey="avance" fill="#582672" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
         </motion.div>
 
         {/* Filtros y búsqueda */}
