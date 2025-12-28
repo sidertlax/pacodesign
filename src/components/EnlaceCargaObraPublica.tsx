@@ -200,7 +200,8 @@ export function EnlaceCargaObraPublica({ userName, onVolverInicio }: EnlaceCarga
   });
 
   const totalObras = obras.length;
-  const obrasIncompletas = obras.filter(o => o.estadoCarga === 'incompleta').length;
+  const obrasEnEjecucion = obras.filter(o => o.etapa === 'ejecucion').length;
+  const obrasPendientesIniciar = obras.filter(o => o.estadoCarga === 'incompleta').length;
   const obrasSinEvidencias = obras.filter(o => !o.evidenciasCompletas).length;
   const iaopPromedio = obras.reduce((sum, o) => sum + o.iaop, 0) / obras.length;
 
@@ -345,9 +346,25 @@ export function EnlaceCargaObraPublica({ userName, onVolverInicio }: EnlaceCarga
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">INFO. INCOMPLETA</p>
+                <p className="text-sm text-gray-600 mb-1">OBRAS EN EJECUCIÓN</p>
+                <p className="text-3xl" style={{ fontWeight: 'bold', color: '#7B1FA2' }}>
+                  {obrasEnEjecucion}
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#7B1FA220' }}>
+                <TrendingUp className="w-6 h-6" style={{ color: '#7B1FA2' }} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2" style={{ borderColor: '#F57C00' }}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">PENDIENTES DE INICIAR</p>
                 <p className="text-3xl" style={{ fontWeight: 'bold', color: '#F57C00' }}>
-                  {obrasIncompletas}
+                  {obrasPendientesIniciar}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F57C0020' }}>

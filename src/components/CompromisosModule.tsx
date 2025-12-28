@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { CompromisosGeneralModule } from './CompromisosGeneralModule';
 import { CompromisoDetailView } from './CompromisoDetailView';
 import { CompromisosByDependencyView } from './CompromisosByDependencyView';
+import { CompromisosDashboardUnidadMedida } from './CompromisosDashboardUnidadMedida';
+import { CompromisosDashboardMunicipio } from './CompromisosDashboardMunicipio';
 
 interface CompromisosModuleProps {
   onClose: () => void;
@@ -10,7 +12,7 @@ interface CompromisosModuleProps {
   dependencies: Array<{ id: string; name: string }>;
 }
 
-type ViewType = 'general' | 'detalle' | 'por-dependencia';
+type ViewType = 'general' | 'detalle' | 'por-dependencia' | 'dashboard-unidad' | 'dashboard-municipio';
 
 export function CompromisosModule({ 
   onClose, 
@@ -25,6 +27,7 @@ export function CompromisosModule({
   const [selectedDependency, setSelectedDependency] = useState<{ id: string; name: string } | null>(
     dependencyId && dependencyName ? { id: dependencyId, name: dependencyName } : null
   );
+  const [añoContexto, setAñoContexto] = useState('todos');
 
   const handleCompromisoClick = (compromiso: any) => {
     setSelectedCompromiso(compromiso);
@@ -34,6 +37,14 @@ export function CompromisosModule({
   const handleDependencyClick = (dep: { id: string; name: string }) => {
     setSelectedDependency(dep);
     setCurrentView('por-dependencia');
+  };
+
+  const handleDashboardUnidadClick = () => {
+    setCurrentView('dashboard-unidad');
+  };
+
+  const handleDashboardMunicipioClick = () => {
+    setCurrentView('dashboard-municipio');
   };
 
   const handleBackToGeneral = () => {
@@ -61,6 +72,8 @@ export function CompromisosModule({
         onClose={onClose}
         onCompromisoClick={handleCompromisoClick}
         onDependencyClick={handleDependencyClick}
+        onDashboardUnidadClick={handleDashboardUnidadClick}
+        onDashboardMunicipioClick={handleDashboardMunicipioClick}
         dependencies={dependencies}
       />
     );
@@ -87,12 +100,34 @@ export function CompromisosModule({
     );
   }
 
+  // Dashboard por Unidad de Medida
+  if (currentView === 'dashboard-unidad') {
+    return (
+      <CompromisosDashboardUnidadMedida
+        onClose={handleBackToGeneral}
+        año={añoContexto}
+      />
+    );
+  }
+
+  // Dashboard por Municipio
+  if (currentView === 'dashboard-municipio') {
+    return (
+      <CompromisosDashboardMunicipio
+        onClose={handleBackToGeneral}
+        año={añoContexto}
+      />
+    );
+  }
+
   // Fallback a vista general
   return (
     <CompromisosGeneralModule
       onClose={onClose}
       onCompromisoClick={handleCompromisoClick}
       onDependencyClick={handleDependencyClick}
+      onDashboardUnidadClick={handleDashboardUnidadClick}
+      onDashboardMunicipioClick={handleDashboardMunicipioClick}
       dependencies={dependencies}
     />
   );

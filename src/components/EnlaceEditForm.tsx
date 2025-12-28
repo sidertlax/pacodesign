@@ -180,6 +180,8 @@ const etapasCumplimiento = [
 export function EnlaceEditForm({ compromiso, onClose, onSave, username }: EnlaceEditFormProps) {
   // Estados del formulario
   const [etapa, setEtapa] = useState(compromiso.etapa);
+  const [etapaSeleccionada, setEtapaSeleccionada] = useState('');
+  const [mediosVerificacion, setMediosVerificacion] = useState<Array<{id: string; tipo: string; archivo: string; comentarios: string}>>([]);
   
   // Presupuestos históricos por año (solo lectura)
   const [presupuesto2021] = useState(2500000);
@@ -190,6 +192,13 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
   // Presupuesto del año en curso (editable)
   const anoActual = 2025;
   const [presupuesto2025, setPresupuesto2025] = useState(6000000);
+  const [presupuesto2026] = useState(0);  // Año futuro
+  const [presupuesto2027] = useState(0);  // Año futuro
+  
+  // Comentarios CGPI y PDF para presupuesto
+  const [comentariosCGPI, setComentariosCGPI] = useState<Array<{id: string; usuario: string; fecha: string; texto: string}>>([]);
+  const [nuevoComentarioCGPI, setNuevoComentarioCGPI] = useState('');
+  const [pdfPresupuesto, setPdfPresupuesto] = useState<string | null>(null);
   
   // Calcular total acumulado
   const presupuestoTotalAcumulado = presupuesto2021 + presupuesto2022 + presupuesto2023 + presupuesto2024 + presupuesto2025;
@@ -283,6 +292,48 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
     } else {
       setMunicipiosBeneficiarios([...municipiosBeneficiarios, municipio]);
     }
+  };
+
+  // Handlers para comentarios CGPI
+  const handleAgregarComentarioCGPI = () => {
+    if (nuevoComentarioCGPI.trim()) {
+      const nuevoComentario = {
+        id: Date.now().toString(),
+        usuario: username,
+        fecha: new Date().toLocaleString('es-MX'),
+        texto: nuevoComentarioCGPI,
+      };
+      setComentariosCGPI([...comentariosCGPI, nuevoComentario]);
+      setNuevoComentarioCGPI('');
+    }
+  };
+
+  // Handlers para medios de verificación
+  const handleAgregarMedioVerificacion = () => {
+    const nuevoMedio = {
+      id: Date.now().toString(),
+      tipo: '',
+      archivo: '',
+      comentarios: '',
+    };
+    setMediosVerificacion([...mediosVerificacion, nuevoMedio]);
+  };
+
+  const handleEliminarMedioVerificacion = (id: string) => {
+    setMediosVerificacion(mediosVerificacion.filter(m => m.id !== id));
+  };
+
+  const handleActualizarMedioVerificacion = (id: string, campo: string, valor: string) => {
+    setMediosVerificacion(mediosVerificacion.map(m => 
+      m.id === id ? { ...m, [campo]: valor } : m
+    ));
+  };
+
+  // Obtener medios de verificación filtrados por etapa
+  const getMediosVerificacionPorEtapa = (etapaCategoria: string) => {
+    return etapasCumplimiento
+      .filter(e => e.categoria.toLowerCase() === etapaCategoria.toLowerCase())
+      .map(e => e.tipo);
   };
 
   const handleGuardarBorrador = () => {
@@ -549,6 +600,50 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
                         </div>
                         <p className="text-xs text-gray-500 mt-2">Solo lectura</p>
                       </div>
+
+                      {/* 2025 - Año actual (habilitado) */}
+                      <div className="bg-green-50 rounded-lg p-4 border-2 border-green-300">
+                        <div className="flex items-center justify-between mb-2">
+                          <Label className="text-sm" style={{ color: '#2E7D32', fontWeight: 'bold' }}>Ejercicio 2025</Label>
+                          <Badge className="text-xs border-0" style={{ backgroundColor: '#2E7D32', color: 'white' }}>
+                            Año actual
+                          </Badge>
+                        </div>
+                        <div className="p-3 bg-white rounded-lg">
+                          <p className="text-lg" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                            ${presupuesto2025.toLocaleString('es-MX')}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">Editable abajo</p>
+                      </div>
+
+                      {/* 2026 - Año futuro (solo visualización) */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 opacity-70">
+                        <div className="flex items-center justify-between mb-2">
+                          <Label className="text-sm text-gray-600">Ejercicio 2026</Label>
+                          <Badge variant="outline" className="text-xs border-blue-400 text-blue-700">Futuro</Badge>
+                        </div>
+                        <div className="p-3 bg-white rounded-lg">
+                          <p className="text-lg text-gray-400" style={{ fontWeight: 'bold' }}>
+                            ${presupuesto2026.toLocaleString('es-MX')}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">Solo visualización</p>
+                      </div>
+
+                      {/* 2027 - Próximo (solo visualización) */}
+                      <div className="bg-gray-100 rounded-lg p-4 border border-gray-300 opacity-60">
+                        <div className="flex items-center justify-between mb-2">
+                          <Label className="text-sm text-gray-500">Ejercicio 2027</Label>
+                          <Badge variant="outline" className="text-xs">Próximo</Badge>
+                        </div>
+                        <div className="p-3 bg-white rounded-lg">
+                          <p className="text-lg text-gray-300" style={{ fontWeight: 'bold' }}>
+                            ${presupuesto2027.toLocaleString('es-MX')}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">Solo visualización</p>
+                      </div>
                     </div>
 
                     <Separator />
@@ -615,6 +710,102 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
                             </p>
                           </AlertDescription>
                         </Alert>
+
+                        {/* Upload de PDF como medio de verificación */}
+                        <div className="mt-6">
+                          <Label className="text-sm text-gray-700 mb-2 block">
+                            Medio de Verificación (PDF) <span className="text-red-600">*</span>
+                          </Label>
+                          <div className="flex items-center gap-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = '.pdf';
+                                input.onchange = (e: any) => {
+                                  const file = e.target.files[0];
+                                  if (file) {
+                                    setPdfPresupuesto(file.name);
+                                  }
+                                };
+                                input.click();
+                              }}
+                              className="flex-shrink-0"
+                            >
+                              <Upload className="w-4 h-4 mr-2" />
+                              Subir PDF
+                            </Button>
+                            {pdfPresupuesto && (
+                              <div className="flex items-center gap-2 flex-1 p-2 bg-white rounded border border-green-300">
+                                <FileText className="w-4 h-4 text-green-600" />
+                                <span className="text-sm" style={{ fontWeight: 'bold' }}>{pdfPresupuesto}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setPdfPresupuesto(null)}
+                                  className="ml-auto"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-600 mt-2">
+                            Suba el documento PDF que comprueba el presupuesto ejercido en {anoActual}
+                          </p>
+                        </div>
+
+                        {/* Módulo de comentarios CGPI */}
+                        <div className="mt-6 border-t pt-6">
+                          <div className="flex items-center gap-2 mb-4">
+                            <FileText className="w-5 h-5" style={{ color: '#582672' }} />
+                            <h4 className="text-sm" style={{ fontWeight: 'bold', color: '#582672' }}>
+                              Comentarios y Revisión CGPI
+                            </h4>
+                          </div>
+
+                          {/* Lista de comentarios */}
+                          {comentariosCGPI.length > 0 && (
+                            <div className="space-y-2 mb-4">
+                              {comentariosCGPI.map((comentario) => (
+                                <div key={comentario.id} className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                                  <div className="flex items-start justify-between mb-1">
+                                    <p className="text-xs" style={{ fontWeight: 'bold', color: '#582672' }}>
+                                      {comentario.usuario}
+                                    </p>
+                                    <p className="text-xs text-gray-500">{comentario.fecha}</p>
+                                  </div>
+                                  <p className="text-sm text-gray-700">{comentario.texto}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Agregar nuevo comentario */}
+                          <div className="flex gap-2">
+                            <Textarea
+                              placeholder="Escriba observaciones o comentarios sobre el presupuesto..."
+                              value={nuevoComentarioCGPI}
+                              onChange={(e) => setNuevoComentarioCGPI(e.target.value)}
+                              rows={3}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              onClick={handleAgregarComentarioCGPI}
+                              disabled={!nuevoComentarioCGPI.trim()}
+                              style={{ backgroundColor: '#582672', color: 'white' }}
+                            >
+                              <Send className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Los comentarios ayudan a la CGPI en la revisión del presupuesto
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -670,198 +861,268 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div>
-                    <Label htmlFor="etapa" className="text-sm text-gray-600">
-                      Etapa de Cumplimiento <span className="text-red-600">*</span>
-                    </Label>
-                    <Select value={etapa} onValueChange={setEtapa}>
-                      <SelectTrigger id="etapa" className="mt-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-96">
-                        {etapasCumplimiento.map((item, index) => (
-                          <SelectItem key={index} value={`${item.categoria} - ${item.tipo}`}>
-                            {item.categoria} - {item.tipo}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <Label className="text-sm text-gray-600 mb-3 block">
-                      Tipo de Cobertura <span className="text-red-600">*</span>
-                    </Label>
-                    <RadioGroup value={cobertura} onValueChange={setCobertura}>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Estatal" id="estatal" />
-                        <Label htmlFor="estatal" className="cursor-pointer">
-                          Cobertura Estatal
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="Municipal" id="municipal" />
-                        <Label htmlFor="municipal" className="cursor-pointer">
-                          Cobertura Municipal
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {cobertura === 'Municipal' && (
-                    <div>
-                      <Label className="text-sm text-gray-600 mb-3 block">
-                        Municipios Seleccionados ({municipiosSeleccionados.length})
-                      </Label>
-
-                      {/* Mini mapa visual */}
-                      <div className="mb-4 p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-                        <div className="relative w-full h-48 bg-white rounded-lg overflow-hidden">
-                          <svg className="w-full h-full" viewBox="0 0 100 100">
-                            {/* Forma del estado */}
-                            <path
-                              d="M 20,25 L 80,20 L 85,35 L 90,55 L 75,70 L 55,75 L 35,72 L 25,65 L 15,50 Z"
-                              fill="#E0E0E0"
-                              stroke="#9E9E9E"
-                              strokeWidth="0.5"
-                            />
-                            
-                            {/* Puntos de municipios seleccionados */}
-                            {[...Array(municipiosSeleccionados.length)].map((_, i) => {
-                              const x = 30 + Math.random() * 40;
-                              const y = 30 + Math.random() * 40;
-                              return (
-                                <circle
-                                  key={i}
-                                  cx={x}
-                                  cy={y}
-                                  r="4"
-                                  fill="#582672"
-                                  stroke="white"
-                                  strokeWidth="1"
-                                />
-                              );
-                            })}
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Lista de municipios con checkboxes */}
-                      <div className="border border-gray-200 rounded-lg p-4 bg-white max-h-64 overflow-y-auto">
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {municipiosTlaxcala.map((municipio) => (
-                            <div key={municipio} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`mun-${municipio}`}
-                                checked={municipiosSeleccionados.includes(municipio)}
-                                onCheckedChange={() => handleToggleMunicipio(municipio)}
-                              />
-                              <Label
-                                htmlFor={`mun-${municipio}`}
-                                className="text-sm cursor-pointer"
-                              >
-                                {municipio}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <Separator />
-
-                  {/* Sección de Evidencias */}
+                  {/* PASO 1: Selección de Etapa de Cumplimiento */}
                   <div>
                     <div className="flex items-center gap-2 mb-4">
-                      <FileText className="w-5 h-5" style={{ color: '#582672' }} />
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#582672', color: 'white' }}>
+                        1
+                      </div>
                       <h3 className="text-lg" style={{ color: '#582672', fontWeight: 'bold' }}>
-                        Medios de Verificación (Evidencias)
+                        Etapa de Cumplimiento
                       </h3>
                     </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Cargue los documentos que comprueban el avance del compromiso
+                    
+                    <Label htmlFor="etapa" className="text-sm text-gray-600 mb-2 block">
+                      Seleccione la etapa actual del compromiso <span className="text-red-600">*</span>
+                    </Label>
+                    <Select value={etapaSeleccionada} onValueChange={setEtapaSeleccionada}>
+                      <SelectTrigger id="etapa">
+                        <SelectValue placeholder="Seleccione una etapa..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="En planeación">En planeación</SelectItem>
+                        <SelectItem value="En gestión">En gestión</SelectItem>
+                        <SelectItem value="En ejecución">En ejecución</SelectItem>
+                        <SelectItem value="Cumplido">Cumplido</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-2">
+                      La etapa seleccionada determinará los medios de verificación disponibles
                     </p>
+                  </div>
 
-                    <Alert className="border-blue-300 bg-blue-50 mb-6">
-                      <Info className="w-4 h-4 text-blue-600" />
-                      <AlertDescription className="text-sm text-blue-800">
-                        <p style={{ fontWeight: 'bold' }}>Campo obligatorio</p>
-                        <p className="text-xs mt-1">
-                          Debe cargar al menos un archivo PDF como evidencia principal del cumplimiento
-                        </p>
-                      </AlertDescription>
-                    </Alert>
-
-                    {/* Zona de carga */}
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer bg-gray-50 mb-6">
-                      <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                      <p className="text-sm mb-2" style={{ fontWeight: 'bold' }}>
-                        Haga clic para seleccionar archivos o arrástrelos aquí
-                      </p>
-                      <p className="text-xs text-gray-500 mb-4">
-                        Formatos permitidos: PDF, JPG, PNG, MP4 • Tamaño máximo: 50 MB por archivo
-                      </p>
-                      <Button variant="outline">
-                        <Upload className="w-4 h-4 mr-2" />
-                        Seleccionar Archivos
-                      </Button>
-                    </div>
-
-                    {/* Lista de archivos cargados */}
-                    {archivos.length > 0 && (
+                  {/* PASO 2: Medios de Verificación (solo si hay etapa seleccionada) */}
+                  {etapaSeleccionada && (
+                    <>
+                      <Separator />
+                      
                       <div>
-                        <Label className="text-sm text-gray-600 mb-3 block">
-                          Archivos Cargados ({archivos.length})
-                        </Label>
-                        <div className="space-y-3">
-                          {archivos.map((archivo) => (
-                            <div
-                              key={archivo.id}
-                              className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-                            >
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-100">
-                                  <FileText className="w-5 h-5 text-purple-600" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm truncate" style={{ fontWeight: 'bold' }}>
-                                    {archivo.nombre}
-                                  </p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <Badge variant="outline" className="text-xs">
-                                      {archivo.tipo}
-                                    </Badge>
-                                    <span className="text-xs text-gray-500">{archivo.tamaño}</span>
-                                    {archivo.obligatorio && (
-                                      <Badge className="text-xs border-0" style={{ backgroundColor: '#2E7D3215', color: '#2E7D32' }}>
-                                        Obligatorio
-                                      </Badge>
-                                    )}
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#1976D2', color: 'white' }}>
+                            2
+                          </div>
+                          <h3 className="text-lg" style={{ color: '#1976D2', fontWeight: 'bold' }}>
+                            Medios de Verificación (Evidencias)
+                          </h3>
+                        </div>
+
+                        <Alert className="border-blue-300 bg-blue-50 mb-4">
+                          <Info className="w-4 h-4 text-blue-600" />
+                          <AlertDescription className="text-sm text-blue-800">
+                            Los tipos de evidencia disponibles están asociados a la etapa: <strong>{etapaSeleccionada}</strong>
+                          </AlertDescription>
+                        </Alert>
+
+                        {/* Lista de medios de verificación */}
+                        {mediosVerificacion.length > 0 && (
+                          <div className="space-y-4 mb-4">
+                            {mediosVerificacion.map((medio, index) => (
+                              <Card key={medio.id} className="border-2 border-blue-100">
+                                <CardContent className="p-4">
+                                  <div className="flex items-start justify-between mb-3">
+                                    <Badge variant="outline">Evidencia {index + 1}</Badge>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEliminarMedioVerificacion(medio.id)}
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
                                   </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="icon">
-                                  <Download className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setArchivos(archivos.filter(a => a.id !== archivo.id))}
-                                  className="hover:bg-red-100 hover:text-red-700"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+
+                                  <div className="space-y-4">
+                                    {/* Selector de tipo de medio */}
+                                    <div>
+                                      <Label className="text-sm text-gray-600 mb-2 block">
+                                        Tipo de medio de verificación <span className="text-red-600">*</span>
+                                      </Label>
+                                      <Select 
+                                        value={medio.tipo} 
+                                        onValueChange={(value) => handleActualizarMedioVerificacion(medio.id, 'tipo', value)}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Seleccione el tipo..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-64">
+                                          {getMediosVerificacionPorEtapa(etapaSeleccionada).map((tipo, idx) => (
+                                            <SelectItem key={idx} value={tipo}>{tipo}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    {/* Upload de archivo */}
+                                    <div>
+                                      <Label className="text-sm text-gray-600 mb-2 block">
+                                        Archivo <span className="text-red-600">*</span>
+                                      </Label>
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          onClick={() => {
+                                            const input = document.createElement('input');
+                                            input.type = 'file';
+                                            input.accept = '.pdf,.jpg,.jpeg,.png,.mp4';
+                                            input.onchange = (e: any) => {
+                                              const file = e.target.files[0];
+                                              if (file) {
+                                                handleActualizarMedioVerificacion(medio.id, 'archivo', file.name);
+                                              }
+                                            };
+                                            input.click();
+                                          }}
+                                          className="flex-shrink-0"
+                                        >
+                                          <Upload className="w-4 h-4 mr-2" />
+                                          Subir archivo
+                                        </Button>
+                                        {medio.archivo && (
+                                          <div className="flex items-center gap-2 flex-1 p-2 bg-green-50 rounded border border-green-300">
+                                            <FileText className="w-4 h-4 text-green-600" />
+                                            <span className="text-sm" style={{ fontWeight: 'bold' }}>{medio.archivo}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        Formatos: PDF, JPG, PNG, MP4 • Máx: 50 MB
+                                      </p>
+                                    </div>
+
+                                    {/* Comentarios del medio */}
+                                    <div>
+                                      <Label className="text-sm text-gray-600 mb-2 block">
+                                        Comentarios / Observaciones
+                                      </Label>
+                                      <Textarea
+                                        value={medio.comentarios}
+                                        onChange={(e) => handleActualizarMedioVerificacion(medio.id, 'comentarios', e.target.value)}
+                                        placeholder="Describa el contenido de la evidencia, contexto, o cualquier observación relevante..."
+                                        rows={3}
+                                      />
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Botón para agregar medio de verificación */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleAgregarMedioVerificacion}
+                          className="w-full border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-blue-50"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Agregar Medio de Verificación
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* PASO 3: Cobertura (solo si hay etapa seleccionada) */}
+                  {etapaSeleccionada && (
+                    <>
+                      <Separator />
+
+                      <div>
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#388E3C', color: 'white' }}>
+                            3
+                          </div>
+                          <h3 className="text-lg" style={{ color: '#388E3C', fontWeight: 'bold' }}>
+                            Tipo de Cobertura
+                          </h3>
+                        </div>
+
+                        <Label className="text-sm text-gray-600 mb-3 block">
+                          Seleccione el tipo de cobertura del compromiso <span className="text-red-600">*</span>
+                        </Label>
+                        <RadioGroup value={cobertura} onValueChange={setCobertura}>
+                          <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                            <RadioGroupItem value="Estatal" id="estatal" />
+                            <Label htmlFor="estatal" className="cursor-pointer flex-1">
+                              <p style={{ fontWeight: 'bold' }}>Cobertura Estatal</p>
+                              <p className="text-xs text-gray-500">El compromiso aplica a todo el estado</p>
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mt-2">
+                            <RadioGroupItem value="Municipal" id="municipal" />
+                            <Label htmlFor="municipal" className="cursor-pointer flex-1">
+                              <p style={{ fontWeight: 'bold' }}>Cobertura Municipal</p>
+                              <p className="text-xs text-gray-500">El compromiso aplica a municipios específicos</p>
+                            </Label>
+                          </div>
+                        </RadioGroup>
+
+                        {/* Selección de municipios (solo si es cobertura municipal) */}
+                        {cobertura === 'Municipal' && (
+                          <div className="mt-6">
+                            <Label className="text-sm text-gray-600 mb-3 block">
+                              Municipios Seleccionados ({municipiosSeleccionados.length})
+                            </Label>
+
+                            {/* Mini mapa visual */}
+                            <div className="mb-4 p-4 bg-gradient-to-br from-green-50 to-blue-50 rounded-lg border border-green-200">
+                              <div className="relative w-full h-48 bg-white rounded-lg overflow-hidden">
+                                <svg className="w-full h-full" viewBox="0 0 100 100">
+                                  {/* Forma del estado */}
+                                  <path
+                                    d="M 20,25 L 80,20 L 85,35 L 90,55 L 75,70 L 55,75 L 35,72 L 25,65 L 15,50 Z"
+                                    fill="#E0E0E0"
+                                    stroke="#9E9E9E"
+                                    strokeWidth="0.5"
+                                  />
+                                  
+                                  {/* Puntos de municipios seleccionados */}
+                                  {[...Array(municipiosSeleccionados.length)].map((_, i) => {
+                                    const x = 30 + Math.random() * 40;
+                                    const y = 30 + Math.random() * 40;
+                                    return (
+                                      <circle
+                                        key={i}
+                                        cx={x}
+                                        cy={y}
+                                        r="4"
+                                        fill="#388E3C"
+                                        stroke="white"
+                                        strokeWidth="1"
+                                      />
+                                    );
+                                  })}
+                                </svg>
                               </div>
                             </div>
-                          ))}
-                        </div>
+
+                            {/* Lista de municipios con checkboxes */}
+                            <div className="border border-gray-200 rounded-lg p-4 bg-white max-h-64 overflow-y-auto">
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {municipiosTlaxcala.map((municipio) => (
+                                  <div key={municipio} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`mun-${municipio}`}
+                                      checked={municipiosSeleccionados.includes(municipio)}
+                                      onCheckedChange={() => handleToggleMunicipio(municipio)}
+                                    />
+                                    <Label
+                                      htmlFor={`mun-${municipio}`}
+                                      className="text-sm cursor-pointer"
+                                    >
+                                      {municipio}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

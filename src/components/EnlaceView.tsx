@@ -25,6 +25,11 @@ import {
   Calendar as CalendarIcon,
   UserCheck,
   ArrowLeft,
+  ListChecks,
+  FileText,
+  Play,
+  Activity,
+  Target,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -47,21 +52,56 @@ import {
   TableRow,
 } from './ui/table';
 import { EnlaceViewProps } from './EnlaceViewProps';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
 
 type ModuloCarga = 'menu' | 'compromisos' | 'gasto' | 'indicadores' | 'normatividad' | 'obra';
+
+// Lista de todas las dependencias posibles
+const dependencias = [
+  'Secretaría de Educación Pública',
+  'Secretaría de Salud',
+  'Secretaría de Desarrollo Social',
+  'Secretaría de Obras Públicas',
+  'Secretaría de Seguridad Pública',
+  'Secretaría de Finanzas',
+  'Secretaría de Desarrollo Económico',
+  'Secretaría de Medio Ambiente',
+  'DIF Estatal',
+  'Comisión Estatal de Agua',
+  'Instituto del Deporte',
+  'Secretaría de Turismo',
+];
 
 // Generar compromisos para la dependencia del enlace
 const generateCompromisosEnlace = () => {
   const compromisos = [];
-  const etapas = ['No iniciado', 'En proceso', '50%', 'Cumplido'];
+  const etapas = ['No iniciado', 'En Planeación', 'En Gestión', 'En Ejecución', 'Cumplido'];
+  const dependenciaEnlace = 'Secretaría de Educación Pública';
   
   for (let i = 0; i < 25; i++) {
-    const etapa = etapas[Math.floor(Math.random() * 4)];
-    let avance = 0;
-    if (etapa === 'No iniciado') avance = 0;
-    else if (etapa === 'En proceso') avance = Math.floor(Math.random() * 40) + 10;
-    else if (etapa === '50%') avance = Math.floor(Math.random() * 20) + 45;
-    else if (etapa === 'Cumplido') avance = 100;
+    const etapa = etapas[Math.floor(Math.random() * 5)];
+    const esResponsable = Math.random() > 0.3; // 70% de probabilidad de ser responsable
+    
+    // Generar dependencias asignadas
+    const numDependencias = Math.floor(Math.random() * 4) + 1; // 1 a 4 dependencias
+    const dependenciasAsignadas = [];
+    
+    // Siempre incluir la dependencia del enlace
+    dependenciasAsignadas.push(dependenciaEnlace);
+    
+    // Agregar otras dependencias aleatorias
+    const otrasDependencias = dependencias.filter(d => d !== dependenciaEnlace);
+    for (let j = 1; j < numDependencias; j++) {
+      const randomDep = otrasDependencias[Math.floor(Math.random() * otrasDependencias.length)];
+      if (!dependenciasAsignadas.includes(randomDep)) {
+        dependenciasAsignadas.push(randomDep);
+      }
+    }
 
     compromisos.push({
       id: `CG-${String(i + 1).padStart(3, '0')}`,
@@ -84,7 +124,8 @@ const generateCompromisosEnlace = () => {
         'Modernización de transporte público',
       ][i % 15],
       etapa,
-      avance,
+      esResponsable,
+      dependenciasAsignadas,
       ultimaActualizacion: new Date(2025, 9, Math.floor(Math.random() * 30) + 1).toLocaleDateString('es-MX'),
     });
   }
@@ -104,6 +145,7 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
   const [compromisos] = useState(generateCompromisosEnlace());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEtapa, setFilterEtapa] = useState('todos');
+  const [filterRol, setFilterRol] = useState<'todos' | 'asignados' | 'interviniente'>('todos');
   const [selectedCompromiso, setSelectedCompromiso] = useState<any>(null);
 
   // Filtrar compromisos
@@ -111,14 +153,18 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
     const matchSearch = c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        c.numero.toLowerCase().includes(searchTerm.toLowerCase());
     const matchEtapa = filterEtapa === 'todos' || c.etapa === filterEtapa;
-    return matchSearch && matchEtapa;
+    const matchRol = filterRol === 'todos' || 
+                     (filterRol === 'asignados' && c.esResponsable) ||
+                     (filterRol === 'interviniente' && !c.esResponsable);
+    return matchSearch && matchEtapa && matchRol;
   });
 
   const getEtapaColor = (etapa: string) => {
     switch (etapa) {
       case 'No iniciado': return '#9E9E9E';
-      case 'En proceso': return '#1976D2';
-      case '50%': return '#F9A825';
+      case 'En Planeación': return '#FF9800';
+      case 'En Gestión': return '#FF5722';
+      case 'En Ejecución': return '#1976D2';
       case 'Cumplido': return '#2E7D32';
       default: return '#9E9E9E';
     }
@@ -133,15 +179,16 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
   // Estadísticas rápidas
   const totalCompromisos = compromisos.length;
   const noIniciados = compromisos.filter(c => c.etapa === 'No iniciado').length;
-  const enProceso = compromisos.filter(c => c.etapa === 'En proceso').length;
-  const al50 = compromisos.filter(c => c.etapa === '50%').length;
+  const enPlaneacion = compromisos.filter(c => c.etapa === 'En Planeación').length;
+  const enGestion = compromisos.filter(c => c.etapa === 'En Gestión').length;
+  const enEjecucion = compromisos.filter(c => c.etapa === 'En Ejecución').length;
   const cumplidos = compromisos.filter(c => c.etapa === 'Cumplido').length;
 
   // Módulos disponibles para carga
   const modulosCarga = [
     {
       id: 'compromisos' as ModuloCarga,
-      titulo: 'Mis Compromisos',
+      titulo: 'Monitoreo Estratégico Gubernamental',
       descripcion: 'Captura y seguimiento de compromisos gubernamentales (MeG)',
       icon: FileCheck,
       color: '#f59e0b',
@@ -149,7 +196,7 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
     },
     {
       id: 'gasto' as ModuloCarga,
-      titulo: 'Información de Gasto',
+      titulo: 'Ejercicio del gasto',
       descripcion: 'Registro de ejercicio presupuestal y gasto público',
       icon: DollarSign,
       color: '#8b5cf6',
@@ -157,7 +204,7 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
     },
     {
       id: 'indicadores' as ModuloCarga,
-      titulo: 'Indicadores de Desempeño',
+      titulo: 'Información de Desempeño',
       descripcion: 'Captura de metas y resultados de indicadores',
       icon: BarChart3,
       color: '#06b6d4',
@@ -173,8 +220,8 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
     },
     {
       id: 'obra' as ModuloCarga,
-      titulo: 'Obra Pública',
-      descripcion: 'Seguimiento de proyectos de infraestructura (ObraEvalúa)',
+      titulo: 'Obra Evalúa',
+      descripcion: 'Evaluación Integral del Desempeño e Infraestructura con Resultados',
       icon: Hammer,
       color: '#582672',
       disponible: true,
@@ -301,6 +348,23 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
 
     // MÓDULO DE COMPROMISOS (MeG)
     if (activeModule === 'compromisos') {
+      // Calcular porcentaje de cumplimiento para el semáforo general
+      const porcentajeCumplimiento = totalCompromisos > 0 
+        ? (cumplidos / totalCompromisos) * 100 
+        : 0;
+      
+      const getSemaforoColor = () => {
+        if (porcentajeCumplimiento >= 66) return '#2E7D32';
+        if (porcentajeCumplimiento >= 33) return '#F9A825';
+        return '#D32F2F';
+      };
+      
+      const getSemaforoLabel = () => {
+        if (porcentajeCumplimiento >= 66) return 'ALTO';
+        if (porcentajeCumplimiento >= 33) return 'MEDIO';
+        return 'BAJO';
+      };
+
       return (
         <div className="container mx-auto px-6 py-8">
           {/* Encabezado del módulo */}
@@ -318,10 +382,37 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver al inicio
             </Button>
-            <h1 className="text-3xl mb-2" style={{ color: '#582672', fontWeight: 'bold' }}>
-              COMPROMISOS
-            </h1>
-            <div className="h-1 w-24 rounded-full" style={{ backgroundColor: '#582672' }} />
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl mb-2" style={{ color: '#582672', fontWeight: 'bold' }}>
+                  MONITOREO ESTRATÉGICO GUBERNAMENTAL
+                </h1>
+                <div className="h-1 w-24 rounded-full" style={{ backgroundColor: '#582672' }} />
+              </div>
+              
+              {/* Semáforo General */}
+              <Card className="border-2" style={{ borderColor: getSemaforoColor() }}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-12 h-12 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: getSemaforoColor() }}
+                    >
+                      <Target className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Nivel de Cumplimiento</p>
+                      <p className="text-xl" style={{ fontWeight: 'bold', color: getSemaforoColor() }}>
+                        {getSemaforoLabel()} ({porcentajeCumplimiento.toFixed(1)}%)
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {cumplidos} de {totalCompromisos} cumplidos
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </motion.div>
 
           {/* KPIs rápidos */}
@@ -331,7 +422,7 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
             transition={{ duration: 0.4 }}
             className="mb-8"
           >
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -363,12 +454,12 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#1976D215' }}>
-                      <TrendingUp className="w-5 h-5" style={{ color: '#1976D2' }} />
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF980015' }}>
+                      <ListChecks className="w-5 h-5" style={{ color: '#FF9800' }} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-600">En proceso</p>
-                      <p className="text-2xl" style={{ fontWeight: 'bold' }}>{enProceso}</p>
+                      <p className="text-xs text-gray-600">En Planeación</p>
+                      <p className="text-2xl" style={{ fontWeight: 'bold' }}>{enPlaneacion}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -377,12 +468,26 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F9A82515' }}>
-                      <AlertCircle className="w-5 h-5" style={{ color: '#F9A825' }} />
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FF572215' }}>
+                      <Play className="w-5 h-5" style={{ color: '#FF5722' }} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-600">50%</p>
-                      <p className="text-2xl" style={{ fontWeight: 'bold' }}>{al50}</p>
+                      <p className="text-xs text-gray-600">En Gestión</p>
+                      <p className="text-2xl" style={{ fontWeight: 'bold' }}>{enGestion}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#1976D215' }}>
+                      <Activity className="w-5 h-5" style={{ color: '#1976D2' }} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">En Ejecución</p>
+                      <p className="text-2xl" style={{ fontWeight: 'bold' }}>{enEjecucion}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -433,9 +538,21 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
                     <SelectContent>
                       <SelectItem value="todos">Todas las etapas</SelectItem>
                       <SelectItem value="No iniciado">No iniciado</SelectItem>
-                      <SelectItem value="En proceso">En proceso</SelectItem>
-                      <SelectItem value="50%">50%</SelectItem>
+                      <SelectItem value="En Planeación">En Planeación</SelectItem>
+                      <SelectItem value="En Gestión">En Gestión</SelectItem>
+                      <SelectItem value="En Ejecución">En Ejecución</SelectItem>
                       <SelectItem value="Cumplido">Cumplido</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={filterRol} onValueChange={setFilterRol}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Filtrar por rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos los roles</SelectItem>
+                      <SelectItem value="asignados">Asignados</SelectItem>
+                      <SelectItem value="interviniente">Interviniente</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -444,6 +561,7 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
                     onClick={() => {
                       setSearchTerm('');
                       setFilterEtapa('todos');
+                      setFilterRol('todos');
                     }}
                   >
                     <Filter className="w-4 h-4 mr-2" />
@@ -473,82 +591,103 @@ export function EnlaceView({ username, onLogout }: EnlaceViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[120px]">Nº Compromiso</TableHead>
-                      <TableHead>Nombre del Compromiso</TableHead>
-                      <TableHead className="w-[140px]">Etapa Actual</TableHead>
-                      <TableHead className="w-[120px]">% Avance</TableHead>
-                      <TableHead className="w-[160px]">Última Actualización</TableHead>
-                      <TableHead className="w-[120px] text-center">Acción</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCompromisos.map((compromiso, index) => (
-                      <motion.tr
-                        key={compromiso.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.02 }}
-                        className="hover:bg-gray-50 transition-colors"
-                      >
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {compromiso.numero}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm" style={{ fontWeight: 'bold' }}>
-                            {compromiso.nombre}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className="text-xs border-0"
-                            style={{
-                              backgroundColor: `${getEtapaColor(compromiso.etapa)}15`,
-                              color: getEtapaColor(compromiso.etapa),
-                            }}
-                          >
-                            {compromiso.etapa}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="h-2 rounded-full transition-all"
-                                  style={{
-                                    width: `${compromiso.avance}%`,
-                                    backgroundColor: getSemaforoAvance(compromiso.avance),
+                <TooltipProvider>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[120px]">Nº Compromiso</TableHead>
+                        <TableHead>Nombre del Compromiso</TableHead>
+                        <TableHead className="w-[140px]">Etapa Actual</TableHead>
+                        <TableHead className="w-[160px] text-center">Dependencias Asignadas</TableHead>
+                        <TableHead className="w-[160px]">Última Actualización</TableHead>
+                        <TableHead className="w-[120px] text-center">Acción</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCompromisos.map((compromiso, index) => (
+                        <motion.tr
+                          key={compromiso.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.02 }}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {compromiso.numero}
+                              </Badge>
+                              {!compromiso.esResponsable && (
+                                <Badge 
+                                  className="text-xs border-0"
+                                  style={{ 
+                                    backgroundColor: '#FF980015',
+                                    color: '#FF9800'
                                   }}
-                                />
-                              </div>
+                                >
+                                  Interviniente
+                                </Badge>
+                              )}
                             </div>
-                            <span className="text-xs" style={{ fontWeight: 'bold' }}>
-                              {compromiso.avance}%
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-xs text-gray-600">{compromiso.ultimaActualizacion}</p>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            size="sm"
-                            onClick={() => setSelectedCompromiso(compromiso)}
-                            style={{ backgroundColor: '#582672', color: 'white' }}
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Editar
-                          </Button>
-                        </TableCell>
-                      </motion.tr>
-                    ))}
-                  </TableBody>
-                </Table>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm" style={{ fontWeight: 'bold' }}>
+                              {compromiso.nombre}
+                            </p>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className="text-xs border-0"
+                              style={{
+                                backgroundColor: `${getEtapaColor(compromiso.etapa)}15`,
+                                color: getEtapaColor(compromiso.etapa),
+                              }}
+                            >
+                              {compromiso.etapa}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex items-center gap-2 cursor-pointer px-3 py-1 rounded-md hover:bg-gray-100 transition-colors">
+                                  <Building2 className="w-4 h-4 text-gray-500" />
+                                  <span className="text-sm" style={{ fontWeight: 'bold' }}>
+                                    {compromiso.dependenciasAsignadas.length}
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-1">
+                                  <p className="text-xs" style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                                    Dependencias Intervinientes:
+                                  </p>
+                                  {compromiso.dependenciasAsignadas.map((dep: string, idx: number) => (
+                                    <p key={idx} className="text-xs">
+                                      • {dep}
+                                    </p>
+                                  ))}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-xs text-gray-600">{compromiso.ultimaActualizacion}</p>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              onClick={() => setSelectedCompromiso(compromiso)}
+                              style={{ backgroundColor: '#582672', color: 'white' }}
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              Editar
+                            </Button>
+                          </TableCell>
+                        </motion.tr>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TooltipProvider>
               </CardContent>
             </Card>
           </motion.div>

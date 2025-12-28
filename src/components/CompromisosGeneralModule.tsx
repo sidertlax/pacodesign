@@ -52,6 +52,8 @@ interface CompromisosGeneralModuleProps {
   onClose: () => void;
   onCompromisoClick: (compromiso: any) => void;
   onDependencyClick: (dep: { id: string; name: string }) => void;
+  onDashboardUnidadClick?: () => void;
+  onDashboardMunicipioClick?: () => void;
   dependencies: Array<{ id: string; name: string }>;
 }
 
@@ -158,6 +160,8 @@ export function CompromisosGeneralModule({
   onClose, 
   onCompromisoClick,
   onDependencyClick,
+  onDashboardUnidadClick,
+  onDashboardMunicipioClick,
   dependencies
 }: CompromisosGeneralModuleProps) {
   const [compromisos] = useState(generateCompromisos());
@@ -339,46 +343,46 @@ export function CompromisosGeneralModule({
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-6 py-6">
         {/* KPIs principales - Bento UI Layout */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="mb-8"
+          className="mb-6"
         >
           <h2 className="text-2xl mb-4" style={{ color: '#582672', fontWeight: 'bold' }}>
             Resumen Ejecutivo
           </h2>
           
-          {/* Grid Bento: 3 columnas - Compromisos, Presupuesto, Metas */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Grupo 1: Compromisos - Bento Layout */}
+          {/* Grid Bento: 3 columnas - Compromisos, Metas, Presupuesto */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Grupo 1: Estado de Compromisos */}
             <Card className="hover:shadow-xl transition-all border-2 border-purple-100" style={{ background: 'linear-gradient(135deg, #58267205 0%, #58267210 100%)' }}>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2" style={{ color: '#582672', fontWeight: 'bold' }}>
                   <Target className="w-5 h-5" />
                   Estado de Compromisos
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   {/* Total - Destacado */}
                   <div className="col-span-2">
                     <Card className="border-2 border-purple-200 bg-white hover:shadow-lg transition-shadow">
-                      <CardContent className="p-6">
+                      <CardContent className="p-4">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#58267220' }}>
-                              <Target className="w-8 h-8" style={{ color: '#582672' }} />
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#58267220' }}>
+                              <Target className="w-6 h-6" style={{ color: '#582672' }} />
                             </div>
                             <div>
-                              <p className="text-sm text-gray-600 mb-1">Total de Compromisos</p>
-                              <p className="text-4xl" style={{ fontWeight: 'bold', color: '#582672' }}>{total}</p>
+                              <p className="text-xs text-gray-600 mb-1">Total de Compromisos</p>
+                              <p className="text-3xl" style={{ fontWeight: 'bold', color: '#582672' }}>{total}</p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <Badge className="text-lg px-4 py-2 border-0" style={{ backgroundColor: '#58267215', color: '#582672', fontWeight: 'bold' }}>
+                            <Badge className="px-3 py-1 border-0" style={{ backgroundColor: '#58267215', color: '#582672', fontWeight: 'bold' }}>
                               {avanceGlobal.toFixed(1)}%
                             </Badge>
                             <p className="text-xs text-gray-500 mt-1">Avance global</p>
@@ -390,56 +394,56 @@ export function CompromisosGeneralModule({
 
                   {/* No iniciado */}
                   <Card className="hover:shadow-md transition-shadow bg-white">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#9E9E9E15' }}>
-                          <Clock className="w-4 h-4" style={{ color: '#9E9E9E' }} />
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#9E9E9E15' }}>
+                          <Clock className="w-3.5 h-3.5" style={{ color: '#9E9E9E' }} />
                         </div>
                         <p className="text-xs text-gray-600">No iniciado</p>
                       </div>
-                      <p className="text-2xl mb-1" style={{ fontWeight: 'bold' }}>{noIniciados}</p>
+                      <p className="text-xl mb-0.5" style={{ fontWeight: 'bold' }}>{noIniciados}</p>
                       <p className="text-xs text-gray-500">{((noIniciados/total)*100).toFixed(1)}%</p>
                     </CardContent>
                   </Card>
 
                   {/* En proceso */}
                   <Card className="hover:shadow-md transition-shadow bg-white">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#1976D215' }}>
-                          <FileCheck className="w-4 h-4" style={{ color: '#1976D2' }} />
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#1976D215' }}>
+                          <FileCheck className="w-3.5 h-3.5" style={{ color: '#1976D2' }} />
                         </div>
                         <p className="text-xs text-gray-600">En proceso</p>
                       </div>
-                      <p className="text-2xl mb-1" style={{ fontWeight: 'bold' }}>{enProceso}</p>
+                      <p className="text-xl mb-0.5" style={{ fontWeight: 'bold' }}>{enProceso}</p>
                       <p className="text-xs text-gray-500">{((enProceso/total)*100).toFixed(1)}%</p>
                     </CardContent>
                   </Card>
 
                   {/* 50% */}
                   <Card className="hover:shadow-md transition-shadow bg-white">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F9A82515' }}>
-                          <TrendingUp className="w-4 h-4" style={{ color: '#F9A825' }} />
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F9A82515' }}>
+                          <TrendingUp className="w-3.5 h-3.5" style={{ color: '#F9A825' }} />
                         </div>
                         <p className="text-xs text-gray-600">Al 50%</p>
                       </div>
-                      <p className="text-2xl mb-1" style={{ fontWeight: 'bold' }}>{al50}</p>
+                      <p className="text-xl mb-0.5" style={{ fontWeight: 'bold' }}>{al50}</p>
                       <p className="text-xs text-gray-500">{((al50/total)*100).toFixed(1)}%</p>
                     </CardContent>
                   </Card>
 
                   {/* Cumplidos - Destacado */}
                   <Card className="border-2 border-green-200 hover:shadow-md transition-shadow bg-white">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3220' }}>
-                          <CheckCircle2 className="w-4 h-4" style={{ color: '#2E7D32' }} />
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3220' }}>
+                          <CheckCircle2 className="w-3.5 h-3.5" style={{ color: '#2E7D32' }} />
                         </div>
                         <p className="text-xs" style={{ fontWeight: 'bold', color: '#2E7D32' }}>Cumplidos</p>
                       </div>
-                      <p className="text-2xl mb-1" style={{ fontWeight: 'bold', color: '#2E7D32' }}>{cumplidos}</p>
+                      <p className="text-xl mb-0.5" style={{ fontWeight: 'bold', color: '#2E7D32' }}>{cumplidos}</p>
                       <p className="text-xs text-gray-500">{((cumplidos/total)*100).toFixed(1)}%</p>
                     </CardContent>
                   </Card>
@@ -447,22 +451,130 @@ export function CompromisosGeneralModule({
               </CardContent>
             </Card>
 
-            {/* Grupo 2: Presupuesto - Bento Layout */}
+            {/* Grupo 2: Metas Alcanzadas - Bento Layout */}
+            <Card className="hover:shadow-xl transition-all border-2 border-green-100" style={{ background: 'linear-gradient(135deg, #2E7D3205 0%, #2E7D3210 100%)' }}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2" style={{ color: '#2E7D32', fontWeight: 'bold' }}>
+                  <CheckCircle2 className="w-5 h-5" />
+                  Metas Alcanzadas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2.5">
+                {/* Metas con mayor número de municipios impactados */}
+                <Card className="border-2 border-green-200 bg-white hover:shadow-lg transition-shadow">
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3220' }}>
+                        <MapIcon className="w-4 h-4" style={{ color: '#2E7D32' }} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-0.5">Mayor Cobertura Geográfica</p>
+                        <p className="text-sm" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                          Ampliación de red de agua potable
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Municipios impactados:</span>
+                        <Badge className="text-xs" style={{ backgroundColor: '#2E7D3220', color: '#2E7D32', fontWeight: 'bold' }}>
+                          12 municipios
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Beneficiarios:</span>
+                        <span className="text-xs" style={{ fontWeight: 'bold' }}>45,230 personas</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Segunda meta destacada */}
+                <Card className="border border-green-200 bg-white hover:shadow-md transition-shadow">
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3215' }}>
+                        <Users className="w-4 h-4" style={{ color: '#2E7D32' }} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-0.5">Amplia Cobertura</p>
+                        <p className="text-sm" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                          Programa estatal de becas
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Municipios impactados:</span>
+                        <Badge className="text-xs" style={{ backgroundColor: '#2E7D3215', color: '#2E7D32', fontWeight: 'bold' }}>
+                          11 municipios
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Beneficiarios:</span>
+                        <span className="text-xs" style={{ fontWeight: 'bold' }}>38,450 estudiantes</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Metas más constantes en municipios */}
+                <div className="pt-2 border-t">
+                  <p className="text-xs mb-2" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                    Metas Más Constantes por Municipio
+                  </p>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between p-1.5 bg-green-50 rounded">
+                      <span className="text-xs">Tlaxcala</span>
+                      <Badge variant="outline" className="text-xs">28 metas</Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-1.5 bg-green-50 rounded">
+                      <span className="text-xs">Apizaco</span>
+                      <Badge variant="outline" className="text-xs">22 metas</Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-1.5 bg-green-50 rounded">
+                      <span className="text-xs">Huamantla</span>
+                      <Badge variant="outline" className="text-xs">18 metas</Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-1.5 bg-green-50 rounded">
+                      <span className="text-xs">Zacatelco</span>
+                      <Badge variant="outline" className="text-xs">17 metas</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Estadística general */}
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-2.5">
+                    <div className="text-center">
+                      <p className="text-xl mb-0.5" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                        {municipiosTlaxcala.reduce((sum, m) => sum + m.metasImpacto, 0)}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Total de metas implementadas en el estado
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
+
+            {/* Grupo 3: Presupuesto Total - Bento Layout */}
             <Card className="hover:shadow-xl transition-all border-2 border-blue-100" style={{ background: 'linear-gradient(135deg, #1976D205 0%, #1976D210 100%)' }}>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2" style={{ color: '#1976D2', fontWeight: 'bold' }}>
                   <DollarSign className="w-5 h-5" />
                   Presupuesto Total
                 </CardTitle>
               </CardHeader>
-              <CardContent className="h-[500px] overflow-y-auto space-y-3 pr-2">
+              <CardContent className="max-h-[430px] overflow-y-auto space-y-2.5 pr-2">
                 {/* Acumulado Histórico - Destacado - PRIMERO */}
                 <Card className="border-2 border-green-200 hover:shadow-md transition-shadow bg-white">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3220' }}>
-                          <DollarSign className="w-5 h-5" style={{ color: '#2E7D32' }} />
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3220' }}>
+                          <DollarSign className="w-4 h-4" style={{ color: '#2E7D32' }} />
                         </div>
                         <div>
                           <Badge className="text-xs mb-1 border-0" style={{ backgroundColor: '#2E7D3220', color: '#2E7D32', fontWeight: 'bold' }}>
@@ -472,11 +584,11 @@ export function CompromisosGeneralModule({
                         </div>
                       </div>
                     </div>
-                    <p className="text-3xl mb-1" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                    <p className="text-2xl mb-1" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
                       ${(acumuladoHistorico.presupuesto / 1000000).toFixed(1)}M
                     </p>
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" style={{ color: '#2E7D32' }} />
+                      <Users className="w-3.5 h-3.5" style={{ color: '#2E7D32' }} />
                       <p className="text-sm" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
                         {acumuladoHistorico.beneficiados.toLocaleString('es-MX')} beneficiados
                       </p>
@@ -486,11 +598,11 @@ export function CompromisosGeneralModule({
 
                 {/* Año 2025 - EN CURSO CON ESTILO FOCUS */}
                 <Card className="border-2 hover:shadow-lg transition-all bg-white shadow-md" style={{ borderColor: '#1976D2', background: 'linear-gradient(135deg, #1976D205 0%, #1976D210 100%)' }}>
-                  <CardContent className="p-4">
+                  <CardContent className="p-3">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center animate-pulse" style={{ backgroundColor: '#1976D230' }}>
-                          <DollarSign className="w-5 h-5" style={{ color: '#1976D2' }} />
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center animate-pulse" style={{ backgroundColor: '#1976D230' }}>
+                          <DollarSign className="w-4 h-4" style={{ color: '#1976D2' }} />
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">
@@ -505,7 +617,7 @@ export function CompromisosGeneralModule({
                         </div>
                       </div>
                     </div>
-                    <p className="text-2xl mb-1" style={{ fontWeight: 'bold', color: '#1976D2' }}>
+                    <p className="text-xl mb-1" style={{ fontWeight: 'bold', color: '#1976D2' }}>
                       ${(presupuestoPorAño[2025].presupuesto / 1000000).toFixed(1)}M
                     </p>
                     <div className="flex items-center gap-2">
@@ -519,11 +631,11 @@ export function CompromisosGeneralModule({
 
                 {/* Año 2024 */}
                 <Card className="hover:shadow-md transition-shadow bg-white">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#58267215' }}>
-                          <DollarSign className="w-5 h-5" style={{ color: '#582672' }} />
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#58267215' }}>
+                          <DollarSign className="w-4 h-4" style={{ color: '#582672' }} />
                         </div>
                         <div>
                           <Badge variant="outline" className="text-xs mb-1">2024</Badge>
@@ -531,7 +643,7 @@ export function CompromisosGeneralModule({
                         </div>
                       </div>
                     </div>
-                    <p className="text-2xl mb-1" style={{ fontWeight: 'bold' }}>
+                    <p className="text-xl mb-1" style={{ fontWeight: 'bold' }}>
                       ${(presupuestoPorAño[2024].presupuesto / 1000000).toFixed(1)}M
                     </p>
                     <div className="flex items-center gap-2">
@@ -543,11 +655,11 @@ export function CompromisosGeneralModule({
 
                 {/* Año 2023 */}
                 <Card className="hover:shadow-md transition-shadow bg-white">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#58267215' }}>
-                          <DollarSign className="w-5 h-5" style={{ color: '#582672' }} />
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#58267215' }}>
+                          <DollarSign className="w-4 h-4" style={{ color: '#582672' }} />
                         </div>
                         <div>
                           <Badge variant="outline" className="text-xs mb-1">2023</Badge>
@@ -555,7 +667,7 @@ export function CompromisosGeneralModule({
                         </div>
                       </div>
                     </div>
-                    <p className="text-2xl mb-1" style={{ fontWeight: 'bold' }}>
+                    <p className="text-xl mb-1" style={{ fontWeight: 'bold' }}>
                       ${(presupuestoPorAño[2023].presupuesto / 1000000).toFixed(1)}M
                     </p>
                     <div className="flex items-center gap-2">
@@ -567,11 +679,11 @@ export function CompromisosGeneralModule({
 
                 {/* Año 2022 */}
                 <Card className="hover:shadow-md transition-shadow bg-white">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#58267215' }}>
-                          <DollarSign className="w-5 h-5" style={{ color: '#582672' }} />
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#58267215' }}>
+                          <DollarSign className="w-4 h-4" style={{ color: '#582672' }} />
                         </div>
                         <div>
                           <Badge variant="outline" className="text-xs mb-1">2022</Badge>
@@ -579,7 +691,7 @@ export function CompromisosGeneralModule({
                         </div>
                       </div>
                     </div>
-                    <p className="text-2xl mb-1" style={{ fontWeight: 'bold' }}>
+                    <p className="text-xl mb-1" style={{ fontWeight: 'bold' }}>
                       ${(presupuestoPorAño[2022].presupuesto / 1000000).toFixed(1)}M
                     </p>
                     <div className="flex items-center gap-2">
@@ -591,11 +703,11 @@ export function CompromisosGeneralModule({
 
                 {/* Año 2021 */}
                 <Card className="hover:shadow-md transition-shadow bg-white">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#58267215' }}>
-                          <DollarSign className="w-5 h-5" style={{ color: '#582672' }} />
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#58267215' }}>
+                          <DollarSign className="w-4 h-4" style={{ color: '#582672' }} />
                         </div>
                         <div>
                           <Badge variant="outline" className="text-xs mb-1">2021</Badge>
@@ -603,7 +715,7 @@ export function CompromisosGeneralModule({
                         </div>
                       </div>
                     </div>
-                    <p className="text-2xl mb-1" style={{ fontWeight: 'bold' }}>
+                    <p className="text-xl mb-1" style={{ fontWeight: 'bold' }}>
                       ${(presupuestoPorAño[2021].presupuesto / 1000000).toFixed(1)}M
                     </p>
                     <div className="flex items-center gap-2">
@@ -614,123 +726,87 @@ export function CompromisosGeneralModule({
                 </Card>
               </CardContent>
             </Card>
-
-            {/* Grupo 3: Metas Alcanzadas - Bento Layout */}
-            <Card className="hover:shadow-xl transition-all border-2 border-green-100" style={{ background: 'linear-gradient(135deg, #2E7D3205 0%, #2E7D3210 100%)' }}>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2" style={{ color: '#2E7D32', fontWeight: 'bold' }}>
-                  <CheckCircle2 className="w-5 h-5" />
-                  Metas Alcanzadas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Metas con mayor número de municipios impactados */}
-                <Card className="border-2 border-green-200 bg-white hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3220' }}>
-                        <MapIcon className="w-5 h-5" style={{ color: '#2E7D32' }} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">Mayor Cobertura Geográfica</p>
-                        <p className="text-sm" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
-                          Ampliación de red de agua potable
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Municipios impactados:</span>
-                        <Badge style={{ backgroundColor: '#2E7D3220', color: '#2E7D32', fontWeight: 'bold' }}>
-                          12 municipios
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Beneficiarios:</span>
-                        <span className="text-xs" style={{ fontWeight: 'bold' }}>45,230 personas</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Segunda meta destacada */}
-                <Card className="border border-green-200 bg-white hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3215' }}>
-                        <Users className="w-5 h-5" style={{ color: '#2E7D32' }} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">Amplia Cobertura</p>
-                        <p className="text-sm" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
-                          Programa estatal de becas
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Municipios impactados:</span>
-                        <Badge style={{ backgroundColor: '#2E7D3215', color: '#2E7D32', fontWeight: 'bold' }}>
-                          11 municipios
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Beneficiarios:</span>
-                        <span className="text-xs" style={{ fontWeight: 'bold' }}>38,450 estudiantes</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Metas más constantes en municipios */}
-                <div className="pt-3 border-t">
-                  <p className="text-xs mb-3" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
-                    Metas Más Constantes por Municipio
-                  </p>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2 bg-green-50 rounded">
-                      <span className="text-xs">Tlaxcala</span>
-                      <Badge variant="outline" className="text-xs">28 metas</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-green-50 rounded">
-                      <span className="text-xs">Apizaco</span>
-                      <Badge variant="outline" className="text-xs">22 metas</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-green-50 rounded">
-                      <span className="text-xs">Huamantla</span>
-                      <Badge variant="outline" className="text-xs">18 metas</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-green-50 rounded">
-                      <span className="text-xs">Zacatelco</span>
-                      <Badge variant="outline" className="text-xs">17 metas</Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Estadística general */}
-                <Card className="bg-green-50 border-green-200">
-                  <CardContent className="p-3">
-                    <div className="text-center">
-                      <p className="text-2xl mb-1" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
-                        {municipiosTlaxcala.reduce((sum, m) => sum + m.metasImpacto, 0)}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Total de metas implementadas en el estado
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CardContent>
-            </Card>
           </div>
         </motion.div>
+
+        {/* Dashboards de Análisis */}
+        {(onDashboardUnidadClick || onDashboardMunicipioClick) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.05 }}
+            className="mb-6"
+          >
+            <h3 className="text-lg mb-4 flex items-center gap-2" style={{ color: '#582672', fontWeight: 'bold' }}>
+              <Target className="w-5 h-5" />
+              Dashboards de Análisis
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {onDashboardUnidadClick && (
+                <Card className="hover:shadow-lg transition-all cursor-pointer border-2 border-blue-100" onClick={onDashboardUnidadClick}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#1976D220' }}>
+                        <Target className="w-7 h-7" style={{ color: '#1976D2' }} />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-lg mb-2" style={{ fontWeight: 'bold', color: '#1976D2' }}>
+                          Dashboard por Unidad de Medida
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Análisis de acciones por tipo de indicador y distribución municipal
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" style={{ borderColor: '#1976D2', color: '#1976D2' }}>
+                            Vista de tabla
+                          </Badge>
+                          <Badge variant="outline" style={{ borderColor: '#1976D2', color: '#1976D2' }}>
+                            Filtros múltiples
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {onDashboardMunicipioClick && (
+                <Card className="hover:shadow-lg transition-all cursor-pointer border-2 border-green-100" onClick={onDashboardMunicipioClick}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#388E3C20' }}>
+                        <MapIcon className="w-7 h-7" style={{ color: '#388E3C' }} />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-lg mb-2" style={{ fontWeight: 'bold', color: '#388E3C' }}>
+                          Dashboard por Municipio
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Análisis geográfico con mapa interactivo y detalle por localidad
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" style={{ borderColor: '#388E3C', color: '#388E3C' }}>
+                            Mapa interactivo
+                          </Badge>
+                          <Badge variant="outline" style={{ borderColor: '#388E3C', color: '#388E3C' }}>
+                            Vista geográfica
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </motion.div>
+        )}
 
         {/* Mapa de compromisos por municipio - Full Width */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="mb-8"
+          className="mb-6"
         >
           {/* Mapa interactivo de Tlaxcala - Full Width */}
           <Card className="border-2 border-purple-200 hover:shadow-xl transition-all">
