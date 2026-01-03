@@ -219,7 +219,8 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
       avance2022: 450,
       avance2023: 680,
       avance2024: 850,
-      presupuesto: 5000000,
+      coberturaBeneficiarios: 'Estatal' as 'Estatal' | 'Municipal',
+      municipiosBeneficiarios: {} as Record<string, number>,
     },
     {
       id: 2,
@@ -229,17 +230,20 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
       avance2022: 12,
       avance2023: 18,
       avance2024: 25,
-      presupuesto: 8000000,
+      coberturaBeneficiarios: 'Municipal' as 'Estatal' | 'Municipal',
+      municipiosBeneficiarios: { 'Tlaxcala': 100, 'Apizaco': 150 } as Record<string, number>,
     },
   ]);
 
   const [tieneBeneficiarios, setTieneBeneficiarios] = useState(true);
   const [tipoBeneficiario, setTipoBeneficiario] = useState('Personas físicas');
   const [numeroBeneficiarios, setNumeroBeneficiarios] = useState('2500');
-  const [municipiosBeneficiarios, setMunicipiosBeneficiarios] = useState<string[]>([
-    'Tlaxcala',
-    'Apizaco',
-  ]);
+  const [coberturaBeneficiarios, setCoberturaBeneficiarios] = useState<'Estatal' | 'Municipal'>('Municipal');
+  const [municipiosBeneficiarios, setMunicipiosBeneficiarios] = useState<Record<string, number>>({
+    'Tlaxcala': 1200,
+    'Apizaco': 1300,
+  });
+  const [medioVerificacionBeneficiarios, setMedioVerificacionBeneficiarios] = useState<File | null>(null);
 
   const [archivos, setArchivos] = useState([
     { id: 1, nombre: 'Evidencia_Q4_2025.pdf', tipo: 'PDF', tamaño: '2.5 MB', obligatorio: true },
@@ -264,7 +268,8 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
           avance2022: 0,
           avance2023: 0,
           avance2024: 0,
-          presupuesto: 0,
+          coberturaBeneficiarios: 'Estatal' as 'Estatal' | 'Municipal',
+          municipiosBeneficiarios: {} as Record<string, number>,
         },
       ]);
     }
@@ -287,11 +292,20 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
   };
 
   const handleToggleMunicipioBeneficiario = (municipio: string) => {
-    if (municipiosBeneficiarios.includes(municipio)) {
-      setMunicipiosBeneficiarios(municipiosBeneficiarios.filter(m => m !== municipio));
+    const nuevosMunicipios = { ...municipiosBeneficiarios };
+    if (municipio in nuevosMunicipios) {
+      delete nuevosMunicipios[municipio];
     } else {
-      setMunicipiosBeneficiarios([...municipiosBeneficiarios, municipio]);
+      nuevosMunicipios[municipio] = 0;
     }
+    setMunicipiosBeneficiarios(nuevosMunicipios);
+  };
+
+  const handleActualizarCantidadBeneficiariosMunicipio = (municipio: string, cantidad: number) => {
+    setMunicipiosBeneficiarios({
+      ...municipiosBeneficiarios,
+      [municipio]: cantidad,
+    });
   };
 
   // Handlers para comentarios CGPI
@@ -334,6 +348,39 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
     return etapasCumplimiento
       .filter(e => e.categoria.toLowerCase() === etapaCategoria.toLowerCase())
       .map(e => e.tipo);
+  };
+
+  // Handlers para municipios beneficiarios en metas
+  const handleToggleMunicipioBeneficiarioMeta = (metaId: number, municipio: string) => {
+    setMetas(metas.map(meta => {
+      if (meta.id === metaId) {
+        const nuevosMunicipios = { ...meta.municipiosBeneficiarios };
+        if (municipio in nuevosMunicipios) {
+          // Si ya existe, lo eliminamos
+          delete nuevosMunicipios[municipio];
+        } else {
+          // Si no existe, lo agregamos con valor 0
+          nuevosMunicipios[municipio] = 0;
+        }
+        return { ...meta, municipiosBeneficiarios: nuevosMunicipios };
+      }
+      return meta;
+    }));
+  };
+
+  const handleActualizarBeneficiariosMunicipio = (metaId: number, municipio: string, cantidad: number) => {
+    setMetas(metas.map(meta => {
+      if (meta.id === metaId) {
+        return {
+          ...meta,
+          municipiosBeneficiarios: {
+            ...meta.municipiosBeneficiarios,
+            [municipio]: cantidad,
+          },
+        };
+      }
+      return meta;
+    }));
   };
 
   const handleGuardarBorrador = () => {
@@ -428,7 +475,7 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="presupuesto">Presupuesto</TabsTrigger>
-            <TabsTrigger value="cobertura">Etapa y Cobertura</TabsTrigger>
+            <TabsTrigger value="cobertura">Etapa</TabsTrigger>
             <TabsTrigger value="metas">Metas</TabsTrigger>
             <TabsTrigger value="beneficiarios">Beneficiarios</TabsTrigger>
           </TabsList>
@@ -857,7 +904,7 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
                 <CardHeader>
                   <CardTitle className="text-xl flex items-center gap-2" style={{ color: '#582672', fontWeight: 'bold' }}>
                     <MapPin className="w-5 h-5" />
-                    C) Etapa y Cobertura
+                    C) Etapa
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -1024,105 +1071,7 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
                     </>
                   )}
 
-                  {/* PASO 3: Cobertura (solo si hay etapa seleccionada) */}
-                  {etapaSeleccionada && (
-                    <>
-                      <Separator />
 
-                      <div>
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#388E3C', color: 'white' }}>
-                            3
-                          </div>
-                          <h3 className="text-lg" style={{ color: '#388E3C', fontWeight: 'bold' }}>
-                            Tipo de Cobertura
-                          </h3>
-                        </div>
-
-                        <Label className="text-sm text-gray-600 mb-3 block">
-                          Seleccione el tipo de cobertura del compromiso <span className="text-red-600">*</span>
-                        </Label>
-                        <RadioGroup value={cobertura} onValueChange={setCobertura}>
-                          <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                            <RadioGroupItem value="Estatal" id="estatal" />
-                            <Label htmlFor="estatal" className="cursor-pointer flex-1">
-                              <p style={{ fontWeight: 'bold' }}>Cobertura Estatal</p>
-                              <p className="text-xs text-gray-500">El compromiso aplica a todo el estado</p>
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mt-2">
-                            <RadioGroupItem value="Municipal" id="municipal" />
-                            <Label htmlFor="municipal" className="cursor-pointer flex-1">
-                              <p style={{ fontWeight: 'bold' }}>Cobertura Municipal</p>
-                              <p className="text-xs text-gray-500">El compromiso aplica a municipios específicos</p>
-                            </Label>
-                          </div>
-                        </RadioGroup>
-
-                        {/* Selección de municipios (solo si es cobertura municipal) */}
-                        {cobertura === 'Municipal' && (
-                          <div className="mt-6">
-                            <Label className="text-sm text-gray-600 mb-3 block">
-                              Municipios Seleccionados ({municipiosSeleccionados.length})
-                            </Label>
-
-                            {/* Mini mapa visual */}
-                            <div className="mb-4 p-4 bg-gradient-to-br from-green-50 to-blue-50 rounded-lg border border-green-200">
-                              <div className="relative w-full h-48 bg-white rounded-lg overflow-hidden">
-                                <svg className="w-full h-full" viewBox="0 0 100 100">
-                                  {/* Forma del estado */}
-                                  <path
-                                    d="M 20,25 L 80,20 L 85,35 L 90,55 L 75,70 L 55,75 L 35,72 L 25,65 L 15,50 Z"
-                                    fill="#E0E0E0"
-                                    stroke="#9E9E9E"
-                                    strokeWidth="0.5"
-                                  />
-                                  
-                                  {/* Puntos de municipios seleccionados */}
-                                  {[...Array(municipiosSeleccionados.length)].map((_, i) => {
-                                    const x = 30 + Math.random() * 40;
-                                    const y = 30 + Math.random() * 40;
-                                    return (
-                                      <circle
-                                        key={i}
-                                        cx={x}
-                                        cy={y}
-                                        r="4"
-                                        fill="#388E3C"
-                                        stroke="white"
-                                        strokeWidth="1"
-                                      />
-                                    );
-                                  })}
-                                </svg>
-                              </div>
-                            </div>
-
-                            {/* Lista de municipios con checkboxes */}
-                            <div className="border border-gray-200 rounded-lg p-4 bg-white max-h-64 overflow-y-auto">
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                {municipiosTlaxcala.map((municipio) => (
-                                  <div key={municipio} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`mun-${municipio}`}
-                                      checked={municipiosSeleccionados.includes(municipio)}
-                                      onCheckedChange={() => handleToggleMunicipio(municipio)}
-                                    />
-                                    <Label
-                                      htmlFor={`mun-${municipio}`}
-                                      className="text-sm cursor-pointer"
-                                    >
-                                      {municipio}
-                                    </Label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -1180,33 +1129,21 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
                         </div>
 
                         <div className="grid grid-cols-1 gap-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm text-gray-600">Unidad de Medida</Label>
-                              <Select
-                                value={meta.unidadMedida}
-                                onValueChange={(value) => handleActualizarMeta(meta.id, 'unidadMedida', value)}
-                              >
-                                <SelectTrigger className="mt-2">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {unidadesMedida.map(unidad => (
-                                    <SelectItem key={unidad} value={unidad}>{unidad}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div>
-                              <Label className="text-sm text-gray-600">Presupuesto Asignado (MXN)</Label>
-                              <Input
-                                type="number"
-                                value={meta.presupuesto}
-                                onChange={(e) => handleActualizarMeta(meta.id, 'presupuesto', Number(e.target.value))}
-                                className="mt-2"
-                              />
-                            </div>
+                          <div>
+                            <Label className="text-sm text-gray-600">Unidad de Medida</Label>
+                            <Select
+                              value={meta.unidadMedida}
+                              onValueChange={(value) => handleActualizarMeta(meta.id, 'unidadMedida', value)}
+                            >
+                              <SelectTrigger className="mt-2">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {unidadesMedida.map(unidad => (
+                                  <SelectItem key={unidad} value={unidad}>{unidad}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
 
                           <div>
@@ -1273,6 +1210,97 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
                               </div>
                             </div>
                           </div>
+
+                          {/* Sección de Beneficiarios por Meta */}
+                          <Separator className="my-4" />
+                          
+                          <div>
+                            <Label className="text-sm text-gray-600 mb-3 block">
+                              Cobertura de Beneficiarios <span className="text-red-600">*</span>
+                            </Label>
+                            <RadioGroup 
+                              value={meta.coberturaBeneficiarios} 
+                              onValueChange={(value) => handleActualizarMeta(meta.id, 'coberturaBeneficiarios', value)}
+                            >
+                              <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                <RadioGroupItem value="Estatal" id={`estatal-${meta.id}`} />
+                                <Label htmlFor={`estatal-${meta.id}`} className="cursor-pointer flex-1">
+                                  <p style={{ fontWeight: 'bold' }}>Estatal</p>
+                                  <p className="text-xs text-gray-500">La meta aplica a todo el estado</p>
+                                </Label>
+                              </div>
+                              <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mt-2">
+                                <RadioGroupItem value="Municipal" id={`municipal-${meta.id}`} />
+                                <Label htmlFor={`municipal-${meta.id}`} className="cursor-pointer flex-1">
+                                  <p style={{ fontWeight: 'bold' }}>Cobertura Municipal</p>
+                                  <p className="text-xs text-gray-500">La meta aplica a municipios específicos</p>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+
+                            {/* Selección de municipios beneficiarios (solo si es municipal) */}
+                            {meta.coberturaBeneficiarios === 'Municipal' && (
+                              <div className="mt-4">
+                                <Label className="text-sm text-gray-600 mb-3 block">
+                                  Municipios Beneficiarios
+                                </Label>
+
+                                {/* Lista de municipios con checkboxes */}
+                                <div className="border border-gray-200 rounded-lg p-4 bg-white max-h-64 overflow-y-auto mb-4">
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    {municipiosTlaxcala.map((municipio) => (
+                                      <div key={municipio} className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`meta-${meta.id}-mun-${municipio}`}
+                                          checked={municipio in meta.municipiosBeneficiarios}
+                                          onCheckedChange={() => handleToggleMunicipioBeneficiarioMeta(meta.id, municipio)}
+                                        />
+                                        <Label
+                                          htmlFor={`meta-${meta.id}-mun-${municipio}`}
+                                          className="text-sm cursor-pointer"
+                                        >
+                                          {municipio}
+                                        </Label>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Inputs numéricos para municipios seleccionados */}
+                                {Object.keys(meta.municipiosBeneficiarios).length > 0 && (
+                                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                    <Label className="text-sm mb-3 block" style={{ color: '#1976D2', fontWeight: 'bold' }}>
+                                      Número de Beneficiarios por Municipio
+                                    </Label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      {Object.keys(meta.municipiosBeneficiarios).sort().map((municipio) => (
+                                        <div key={municipio} className="bg-white rounded-lg p-3 border border-blue-200">
+                                          <Label htmlFor={`meta-${meta.id}-benef-${municipio}`} className="text-xs text-gray-600 mb-1 block">
+                                            {municipio}
+                                          </Label>
+                                          <Input
+                                            id={`meta-${meta.id}-benef-${municipio}`}
+                                            type="number"
+                                            min="0"
+                                            value={meta.municipiosBeneficiarios[municipio]}
+                                            onChange={(e) => handleActualizarBeneficiariosMunicipio(meta.id, municipio, Number(e.target.value))}
+                                            placeholder="Cantidad"
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="mt-3 pt-3 border-t border-blue-200">
+                                      <p className="text-sm text-gray-600">
+                                        Total de beneficiarios: <strong style={{ color: '#1976D2' }}>
+                                          {Object.values(meta.municipiosBeneficiarios).reduce((sum, val) => sum + val, 0).toLocaleString('es-MX')}
+                                        </strong>
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -1317,74 +1345,190 @@ export function EnlaceEditForm({ compromiso, onClose, onSave, username }: Enlace
 
                   {tieneBeneficiarios && (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <Label htmlFor="tipo-beneficiario" className="text-sm text-gray-600">
-                            Tipo de Beneficiario
-                          </Label>
-                          <Select value={tipoBeneficiario} onValueChange={setTipoBeneficiario}>
-                            <SelectTrigger id="tipo-beneficiario" className="mt-2">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Personas físicas">Personas físicas</SelectItem>
-                              <SelectItem value="Familias">Familias</SelectItem>
-                              <SelectItem value="Empresas">Empresas</SelectItem>
-                              <SelectItem value="Organizaciones">Organizaciones</SelectItem>
-                              <SelectItem value="Instituciones">Instituciones</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div>
+                        <Label htmlFor="tipo-beneficiario" className="text-sm text-gray-600">
+                          Tipo de Beneficiario
+                        </Label>
+                        <Select value={tipoBeneficiario} onValueChange={setTipoBeneficiario}>
+                          <SelectTrigger id="tipo-beneficiario" className="mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Personas físicas">Personas físicas</SelectItem>
+                            <SelectItem value="Familias">Familias</SelectItem>
+                            <SelectItem value="Empresas">Empresas</SelectItem>
+                            <SelectItem value="Organizaciones">Organizaciones</SelectItem>
+                            <SelectItem value="Instituciones">Instituciones</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                        <div>
-                          <Label htmlFor="numero-beneficiarios" className="text-sm text-gray-600">
-                            Número Total de Beneficiarios
-                          </Label>
+                      <Separator />
+
+                      {/* Selector de Cobertura de Beneficiarios */}
+                      <div>
+                        <Label className="text-sm text-gray-600 mb-3 block">
+                          Cobertura de Beneficiarios <span className="text-red-600">*</span>
+                        </Label>
+                        <RadioGroup 
+                          value={coberturaBeneficiarios} 
+                          onValueChange={(value) => setCoberturaBeneficiarios(value as 'Estatal' | 'Municipal')}
+                        >
+                          <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                            <RadioGroupItem value="Estatal" id="benef-estatal" />
+                            <Label htmlFor="benef-estatal" className="cursor-pointer flex-1">
+                              <p style={{ fontWeight: 'bold' }}>Estatal</p>
+                              <p className="text-xs text-gray-500">Los beneficiarios están a nivel estatal</p>
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mt-2">
+                            <RadioGroupItem value="Municipal" id="benef-municipal" />
+                            <Label htmlFor="benef-municipal" className="cursor-pointer flex-1">
+                              <p style={{ fontWeight: 'bold' }}>Cobertura Municipal</p>
+                              <p className="text-xs text-gray-500">Los beneficiarios están distribuidos por municipios</p>
+                            </Label>
+                          </div>
+                        </RadioGroup>
+
+                        {/* Selección de municipios beneficiarios (solo si es municipal) */}
+                        {coberturaBeneficiarios === 'Municipal' && (
+                          <div className="mt-4">
+                            <Label className="text-sm text-gray-600 mb-3 block">
+                              Municipios Beneficiarios
+                            </Label>
+
+                            {/* Lista de municipios con checkboxes */}
+                            <div className="border border-gray-200 rounded-lg p-4 bg-white max-h-64 overflow-y-auto mb-4">
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {municipiosTlaxcala.map((municipio) => (
+                                  <div key={municipio} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`benef-mun-${municipio}`}
+                                      checked={municipio in municipiosBeneficiarios}
+                                      onCheckedChange={() => handleToggleMunicipioBeneficiario(municipio)}
+                                    />
+                                    <Label
+                                      htmlFor={`benef-mun-${municipio}`}
+                                      className="text-sm cursor-pointer"
+                                    >
+                                      {municipio}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Inputs numéricos para municipios seleccionados */}
+                            {Object.keys(municipiosBeneficiarios).length > 0 && (
+                              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                <Label className="text-sm mb-3 block" style={{ color: '#1976D2', fontWeight: 'bold' }}>
+                                  Número de Beneficiarios por Municipio
+                                </Label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {Object.keys(municipiosBeneficiarios).sort().map((municipio) => (
+                                    <div key={municipio} className="bg-white rounded-lg p-3 border border-blue-200">
+                                      <Label htmlFor={`benef-cant-${municipio}`} className="text-xs text-gray-600 mb-1 block">
+                                        {municipio}
+                                      </Label>
+                                      <Input
+                                        id={`benef-cant-${municipio}`}
+                                        type="number"
+                                        min="0"
+                                        value={municipiosBeneficiarios[municipio]}
+                                        onChange={(e) => handleActualizarCantidadBeneficiariosMunicipio(municipio, Number(e.target.value))}
+                                        placeholder="Cantidad de beneficiarios"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="mt-3 pt-3 border-t border-blue-200">
+                                  <p className="text-sm text-gray-600">
+                                    Total de beneficiarios: <strong style={{ color: '#1976D2' }}>
+                                      {Object.values(municipiosBeneficiarios).reduce((sum, val) => sum + val, 0).toLocaleString('es-MX')}
+                                    </strong>
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      {/* Medio de Verificación de Beneficiarios */}
+                      <div>
+                        <Label className="text-sm text-gray-600 mb-3 block">
+                          Medio de Verificación de Beneficiarios
+                        </Label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-400 hover:bg-purple-50/30 transition-colors cursor-pointer">
                           <Input
-                            id="numero-beneficiarios"
-                            type="number"
-                            value={numeroBeneficiarios}
-                            onChange={(e) => setNumeroBeneficiarios(e.target.value)}
-                            className="mt-2"
+                            id="file-benef-verificacion"
+                            type="file"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setMedioVerificacionBeneficiarios(file);
+                              }
+                            }}
                           />
+                          <Label htmlFor="file-benef-verificacion" className="cursor-pointer">
+                            <Upload className="w-10 h-10 mx-auto mb-3 text-gray-400" />
+                            {medioVerificacionBeneficiarios ? (
+                              <div>
+                                <p className="text-sm" style={{ fontWeight: 'bold', color: '#582672' }}>
+                                  {medioVerificacionBeneficiarios.name}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {(medioVerificacionBeneficiarios.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="mt-2"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setMedioVerificacionBeneficiarios(null);
+                                  }}
+                                >
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                  Eliminar
+                                </Button>
+                              </div>
+                            ) : (
+                              <div>
+                                <p className="text-sm text-gray-600">
+                                  Haga clic para cargar documento
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  PDF, Word o Excel (máx. 10 MB)
+                                </p>
+                              </div>
+                            )}
+                          </Label>
                         </div>
                       </div>
 
                       <Separator />
 
-                      <div>
-                        <Label className="text-sm text-gray-600 mb-3 block">
-                          Municipios donde aplica ({municipiosBeneficiarios.length})
-                        </Label>
-                        <div className="border border-gray-200 rounded-lg p-4 bg-white max-h-64 overflow-y-auto">
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {municipiosTlaxcala.map((municipio) => (
-                              <div key={municipio} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`ben-${municipio}`}
-                                  checked={municipiosBeneficiarios.includes(municipio)}
-                                  onCheckedChange={() => handleToggleMunicipioBeneficiario(municipio)}
-                                />
-                                <Label
-                                  htmlFor={`ben-${municipio}`}
-                                  className="text-sm cursor-pointer"
-                                >
-                                  {municipio}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
+                      {/* Resumen de Beneficiarios */}
                       <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                         <h4 className="text-sm mb-2" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
                           Resumen de Beneficiarios
                         </h4>
                         <div className="space-y-1 text-sm">
                           <p><strong>Tipo:</strong> {tipoBeneficiario}</p>
-                          <p><strong>Número total:</strong> {Number(numeroBeneficiarios).toLocaleString('es-MX')}</p>
-                          <p><strong>Municipios:</strong> {municipiosBeneficiarios.length}</p>
+                          <p><strong>Cobertura:</strong> {coberturaBeneficiarios}</p>
+                          {coberturaBeneficiarios === 'Municipal' && (
+                            <>
+                              <p><strong>Municipios seleccionados:</strong> {Object.keys(municipiosBeneficiarios).length}</p>
+                              <p><strong>Total de beneficiarios:</strong> {Object.values(municipiosBeneficiarios).reduce((sum, val) => sum + val, 0).toLocaleString('es-MX')}</p>
+                            </>
+                          )}
+                          <p><strong>Medio de verificación:</strong> {medioVerificacionBeneficiarios ? medioVerificacionBeneficiarios.name : 'No cargado'}</p>
                         </div>
                       </div>
                     </>
