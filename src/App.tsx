@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { LoginScreen } from "./components/LoginScreen";
+import { MagicLinkSignIn } from "./components/MagicLinkSignIn";
 import { EnlaceView } from "./components/EnlaceView";
 import { Header } from "./components/Header";
 import { FilterPanel } from "./components/FilterPanel";
@@ -185,6 +186,7 @@ const generateDependencyDetail = (
 export default function App() {
   // Estados de autenticación
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showMagicLink, setShowMagicLink] = useState(false);
   const [currentUser, setCurrentUser] = useState<{
     username: string;
     userType: "admin" | "enlace";
@@ -294,7 +296,22 @@ export default function App() {
 
   // Si no está autenticado, mostrar LoginScreen
   if (!isAuthenticated) {
-    return <LoginScreen onLogin={handleLogin} />;
+    // Si está en la vista de Magic Link
+    if (showMagicLink) {
+      return (
+        <MagicLinkSignIn
+          onBackToLogin={() => setShowMagicLink(false)}
+        />
+      );
+    }
+    
+    // Mostrar LoginScreen por defecto
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        onShowMagicLink={() => setShowMagicLink(true)}
+      />
+    );
   }
 
   // Si es usuario enlace, mostrar su vista específica

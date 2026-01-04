@@ -11,9 +11,10 @@ import { motion } from 'motion/react';
 
 interface LoginScreenProps {
   onLogin: (username: string, userType: 'admin' | 'enlace') => void;
+  onShowMagicLink?: () => void;
 }
 
-export function LoginScreen({ onLogin }: LoginScreenProps) {
+export function LoginScreen({ onLogin, onShowMagicLink }: LoginScreenProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -168,6 +169,23 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                   )}
                 </Button>
               </form>
+
+              {onShowMagicLink && (
+                <div className="mt-4 text-center">
+                  <Separator className="mb-4" />
+                  <p className="text-xs text-gray-600 mb-2">
+                    ¿Prefieres acceder sin contraseña?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onShowMagicLink}
+                    className="text-sm hover:underline transition-colors"
+                    style={{ color: '#582672', fontWeight: 'bold' }}
+                  >
+                    Iniciar sesión con enlace mágico →
+                  </button>
+                </div>
+              )}
 
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="bg-blue-50 rounded-lg p-4">
