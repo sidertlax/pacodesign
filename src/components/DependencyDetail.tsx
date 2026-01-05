@@ -91,7 +91,13 @@ export function DependencyDetail({
   ];
 
   const getRandomResponsible = (depId: string) => {
-    const index = parseInt(depId.replace('dep-', '')) % responsibleNames.length;
+    // Use hash of string instead of parseInt for new ID format (dep-archivo-general-e)
+    let hash = 0;
+    for (let i = 0; i < depId.length; i++) {
+      hash = ((hash << 5) - hash) + depId.charCodeAt(i);
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    const index = Math.abs(hash) % responsibleNames.length;
     return responsibleNames[index];
   };
 
@@ -131,8 +137,14 @@ export function DependencyDetail({
         address: 'Blvd. Revolución No. 2, Col. Centro, Tlaxcala de Xicohténcatl, Tlax.'
       }
     ];
-    
-    const index = parseInt(depId.replace('dep-', '')) % contacts.length;
+
+    // Use hash of string instead of parseInt for new ID format (dep-archivo-general-e)
+    let hash = 0;
+    for (let i = 0; i < depId.length; i++) {
+      hash = ((hash << 5) - hash) + depId.charCodeAt(i);
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    const index = Math.abs(hash) % contacts.length;
     return contacts[index];
   };
 

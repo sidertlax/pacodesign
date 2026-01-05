@@ -84,6 +84,12 @@ export const indicadoresAPI = {
   getByDependency: (dependencyId: string, fiscalYear: number, quarter: number) =>
     apiRequest(`/indicadores/dependencies/${dependencyId}?fiscal_year=${fiscalYear}&quarter=${quarter}`),
 
+  getStatistics: (dependencyId: string, fiscalYear: number, quarter: number) =>
+    apiRequest(`/indicadores/dependencies/${dependencyId}/statistics?fiscal_year=${fiscalYear}&quarter=${quarter}`),
+
+  getAllStatistics: (fiscalYear: number, quarter: number) =>
+    apiRequest(`/indicadores/statistics/bulk?fiscal_year=${fiscalYear}&quarter=${quarter}`),
+
   getById: (id: string) => apiRequest(`/indicadores/${id}`),
 
   create: (data: any) =>
@@ -130,6 +136,16 @@ export const compromisosAPI = {
   getByDependency: (dependencyId: string, añoContexto?: string) => {
     const params = añoContexto && añoContexto !== 'todos' ? `?año_contexto=${añoContexto}` : '';
     return apiRequest(`/compromisos/dependencies/${dependencyId}${params}`);
+  },
+
+  getStatistics: (dependencyId: string, añoContexto?: string) => {
+    const params = añoContexto && añoContexto !== 'todos' ? `?año_contexto=${añoContexto}` : '';
+    return apiRequest(`/compromisos/dependencies/${dependencyId}/statistics${params}`);
+  },
+
+  getAllStatistics: (añoContexto?: string) => {
+    const params = añoContexto && añoContexto !== 'todos' ? `?año_contexto=${añoContexto}` : '';
+    return apiRequest(`/compromisos/statistics/bulk${params}`);
   },
 
   getById: (id: string) => apiRequest(`/compromisos/${id}`),

@@ -20,7 +20,7 @@ import {
   Scale,
   HardHat,
 } from "lucide-react";
-import { dependenciesAPI } from "./services/api";
+import { dependenciesAPI, indicadoresAPI, compromisosAPI } from "./services/api";
 
 // Mock data for 60 dependencies
 const generateDependencies = () => {
@@ -216,18 +216,52 @@ export default function App() {
       try {
         setLoadingDependencies(true);
         const response = await dependenciesAPI.getAll();
-        // Map API response to match expected format
-        const mappedDeps = response.dependencies.map((dep: any) => ({
-          id: dep.id,
-          name: dep.name,
-          modules: {
-            gasto: Math.floor(Math.random() * 30) + 70, // Mock percentages for now
-            indicadores: Math.floor(Math.random() * 30) + 70,
-            compromisos: Math.floor(Math.random() * 30) + 70,
-            normatividad: Math.floor(Math.random() * 30) + 70,
-          }
-        }));
-        setDependencies(mappedDeps);
+
+        // Fetch statistics for each dependency in parallel
+        const currentYear = new Date().getFullYear();
+        const currentQuarter = 4; // Default to Q4
+
+        const depsWithStats = await Promise.all(
+          response.dependencies.map(async (dep: any) => {
+            try {
+              // Fetch statistics for Indicadores and Compromisos in parallel
+              const [indicadoresStats, compromisosStats] = await Promise.all([
+                indicadoresAPI.getStatistics(dep.id, currentYear, currentQuarter).catch(() => ({ statistics: { percentage: 0 } })),
+                compromisosAPI.getStatistics(dep.id).catch(() => ({ statistics: { percentage: 0 } }))
+              ]);
+
+              // Ensure percentages are valid numbers
+              const indicadoresPercent = indicadoresStats?.statistics?.percentage || 0;
+              const compromisosPercent = compromisosStats?.statistics?.percentage || 0;
+
+              return {
+                id: dep.id,
+                name: dep.name,
+                modules: {
+                  gasto: Math.floor(Math.random() * 30) + 70, // Still mock - no gasto statistics endpoint yet
+                  indicadores: isNaN(indicadoresPercent) ? 0 : Math.min(100, Math.max(0, indicadoresPercent)),
+                  compromisos: isNaN(compromisosPercent) ? 0 : Math.min(100, Math.max(0, compromisosPercent)),
+                  normatividad: Math.floor(Math.random() * 30) + 70, // Still mock
+                }
+              };
+            } catch (error) {
+              console.error(`Error fetching stats for ${dep.name}:`, error);
+              // Fallback to mock data for this dependency
+              return {
+                id: dep.id,
+                name: dep.name,
+                modules: {
+                  gasto: Math.floor(Math.random() * 30) + 70,
+                  indicadores: Math.floor(Math.random() * 30) + 70,
+                  compromisos: Math.floor(Math.random() * 30) + 70,
+                  normatividad: Math.floor(Math.random() * 30) + 70,
+                }
+              };
+            }
+          })
+        );
+
+        setDependencies(depsWithStats);
       } catch (error) {
         console.error('Error fetching dependencies:', error);
         // Fallback to mock data if API fails
@@ -361,27 +395,52 @@ export default function App() {
 
   // Si hay una dependencia seleccionada, mostrar su detalle
   if (selectedDependency && currentView === "dashboard") {
-    const detailData = generateDependencyDetail(
-      selectedDependency.id,
-      selectedDependency.name,
-    );
+    // Wait for dependencies to load before showing detail
+    if (loadingDependencies || dependencies.length === 0) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando detalles...</p>
+          </div>
+        </div>
+      );
+    }
+
     // Encontrar la dependencia para obtener los datos de módulos
     const dependency = dependencies.find(
       (d) => d.id === selectedDependency.id,
+    );
+
+    // If dependency not found, show error and go back
+    if (!dependency) {
+      console.error('Dependency not found:', selectedDependency.id);
+      setTimeout(() => setSelectedDependency(null), 0);
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Error: Dependencia no encontrada</p>
+            <button
+              onClick={() => setSelectedDependency(null)}
+              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+            >
+              Volver al Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const detailData = generateDependencyDetail(
+      selectedDependency.id,
+      selectedDependency.name,
     );
 
     return (
       <DependencyDetail
         {...detailData}
         dependencyId={selectedDependency.id}
-        modules={
-          dependency?.modules || {
-            gasto: 0,
-            indicadores: 0,
-            compromisos: 0,
-            normatividad: 0,
-          }
-        }
+        modules={dependency.modules}
         onClose={() => setSelectedDependency(null)}
         onModuleClick={(module) => {
           setModuleViewDependency(selectedDependency);
@@ -525,17 +584,24 @@ export default function App() {
             />
           </div>
           <div className="lg:col-span-3">
-            <DependencyTable
-              dependencies={dependencies}
-              searchTerm={searchTerm}
-              selectedModules={selectedModules}
-              onDependencyClick={(dep) =>
-                setSelectedDependency({
-                  id: dep.id,
-                  name: dep.name,
-                })
-              }
-            />
+            {loadingDependencies ? (
+              <div className="bg-white rounded-lg shadow p-8 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Cargando dependencias y estadísticas...</p>
+              </div>
+            ) : (
+              <DependencyTable
+                dependencies={dependencies}
+                searchTerm={searchTerm}
+                selectedModules={selectedModules}
+                onDependencyClick={(dep) =>
+                  setSelectedDependency({
+                    id: dep.id,
+                    name: dep.name,
+                  })
+                }
+              />
+            )}
           </div>
         </div>
       </main>
