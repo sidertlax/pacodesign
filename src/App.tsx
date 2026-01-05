@@ -234,6 +234,12 @@ export default function App() {
               const indicadoresPercent = indicadoresStats?.statistics?.percentage || 0;
               const compromisosPercent = compromisosStats?.statistics?.percentage || 0;
 
+              // Debug logging
+              console.log(`Stats for ${dep.name}:`, {
+                indicadores: indicadoresPercent,
+                compromisos: compromisosPercent
+              });
+
               return {
                 id: dep.id,
                 name: dep.name,
