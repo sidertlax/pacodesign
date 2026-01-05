@@ -142,13 +142,32 @@ interface Comentario {
 
 // Generar datos detallados del compromiso
 const generateCompromisoDetail = (compromiso: any) => {
+  // Parse real intervinientes data from database
+  const intervinientesRaw = compromiso._original?.intervinientes || '';
   const intervinientes = [];
-  for (let i = 0; i < compromiso.numIntervinientes; i++) {
-    const avance = Math.floor(Math.random() * 100);
+
+  if (intervinientesRaw && intervinientesRaw !== 'N/A') {
+    // Split by comma or newline, clean up, and filter empty strings
+    const nombres = intervinientesRaw
+      .split(/[,\n]+/)
+      .map((name: string) => name.trim())
+      .filter((name: string) => name.length > 0);
+
+    nombres.forEach((nombre: string, index: number) => {
+      intervinientes.push({
+        id: `int-${index}`,
+        nombre: nombre,
+        rol: index === 0 ? 'Coordinador' : 'Colaborador',
+      });
+    });
+  }
+
+  // If no intervinientes data, show at least the main dependency
+  if (intervinientes.length === 0) {
     intervinientes.push({
-      id: `dep-${i + 1}`,
-      nombre: `Dependencia Interviniente ${i + 1}`,
-      rol: i === 0 ? 'Responsable Principal' : 'Colaborador',
+      id: 'main-dep',
+      nombre: compromiso.dependenciaResponsable,
+      rol: 'Responsable Principal',
     });
   }
 
@@ -180,12 +199,19 @@ const generateCompromisoDetail = (compromiso: any) => {
     }
   }
 
+  // Use REAL budget data from database
+  const presupuestoEjercido = compromiso._original?.presupuesto_ejercido || compromiso.presupuestoEjercido || 0;
+  // Estimate approved budget based on ejercido (since we only have ejercido in database)
+  const presupuestoAprobado = presupuestoEjercido > 0 && compromiso.avance > 0
+    ? Math.floor(presupuestoEjercido / (compromiso.avance / 100))
+    : presupuestoEjercido;
+
   return {
     ...compromiso,
     descripcionCompleta: `${compromiso.titulo}. Este compromiso busca mejorar la calidad de vida de la población mediante acciones concretas y medibles que impacten directamente en el desarrollo estatal. Se contempla la participación coordinada de múltiples dependencias para garantizar el cumplimiento de los objetivos establecidos.`,
-    presupuestoAprobado: Math.floor(Math.random() * 50000000) + 5000000,
-    presupuestoModificado: Math.floor(Math.random() * 55000000) + 5000000,
-    presupuestoEjercido: Math.floor(Math.random() * 50000000) + 3000000,
+    presupuestoAprobado,
+    presupuestoModificado: presupuestoAprobado,
+    presupuestoEjercido,
     proyecto: 'Plan Estatal de Desarrollo 2021-2027',
     cobertura: Math.random() > 0.5 ? 'Municipal' : 'Estatal',
     municipiosSeleccionados,
@@ -196,44 +222,20 @@ const generateCompromisoDetail = (compromiso: any) => {
     metas: [
       {
         id: 1,
-        unidadMedida: 'Personas beneficiadas',
-        descripcion: 'Familias beneficiadas con el programa',
-        avance2021: 250,
-        avance2022: 450,
-        avance2023: 680,
-        avance2024: 850,
-        presupuesto: 5000000,
-        fechaReporte: '28 Oct 2025',
-        reportadoPor: 'Lic. María González - Coordinadora de Seguimiento',
-      },
-      {
-        id: 2,
-        unidadMedida: 'Obras entregadas',
-        descripcion: 'Infraestructura construida y entregada',
-        avance2021: 5,
-        avance2022: 12,
-        avance2023: 18,
-        avance2024: 25,
-        presupuesto: 15000000,
-        fechaReporte: '25 Oct 2025',
-        reportadoPor: 'Ing. Carlos Hernández - Director de Obras',
-      },
-      {
-        id: 3,
-        unidadMedida: 'Servicios implementados',
-        descripcion: 'Nuevos servicios públicos en operación',
-        avance2021: 8,
-        avance2022: 15,
-        avance2023: 22,
-        avance2024: 30,
-        presupuesto: 8000000,
-        fechaReporte: '20 Oct 2025',
-        reportadoPor: 'Lic. Ana Martínez - Jefa de Servicios',
+        unidadMedida: compromiso._original?.unidad_medida || compromiso.metaGeneral?.split(' ').slice(1).join(' ') || 'Unidad',
+        descripcion: compromiso.titulo,
+        avance2021: compromiso._original?.presupuesto_2021 || 0,
+        avance2022: compromiso._original?.presupuesto_2022 || 0,
+        avance2023: compromiso._original?.presupuesto_2023 || 0,
+        avance2024: compromiso._original?.presupuesto_2024 || 0,
+        presupuesto: presupuestoEjercido,
+        fechaReporte: compromiso.ultimaActualizacion || new Date().toLocaleDateString('es-MX'),
+        reportadoPor: compromiso.dependenciaResponsable,
       },
     ],
     beneficiarios: {
       tipo: 'Personas físicas',
-      numeroTotal: 2500,
+      numeroTotal: compromiso._original?.beneficiarios || compromiso.beneficiarios || 0,
       municipiosAplica: municipiosSeleccionados,
     },
     mediosVerificacion: [

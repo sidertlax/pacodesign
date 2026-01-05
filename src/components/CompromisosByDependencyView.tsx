@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Building2,
@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Filter,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -20,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { compromisosAPI } from '../services/api';
 
 interface CompromisosByDependencyViewProps {
   dependency: { id: string; name: string };
@@ -27,45 +29,30 @@ interface CompromisosByDependencyViewProps {
   onCompromisoClick: (compromiso: any) => void;
 }
 
-// Generar compromisos para una dependencia específica
-const generateCompromisosForDependency = (dependencyName: string) => {
-  const numCompromisos = Math.floor(Math.random() * 15) + 10; // 10-25 compromisos por dependencia
-  const compromisos = [];
-  const etapas = ['No iniciado', 'Planeación', 'Gestión', 'Ejecución', 'Cumplido'];
-  const roles = ['Responsable Principal', 'Colaborador'];
+// Map API data to component format
+const mapApiDataToView = (apiData: any[]) => {
+  return apiData.map(c => {
+    // Map fase to etapa
+    let etapa = 'No iniciado';
+    if (c.fase === 'cumplido') etapa = 'Cumplido';
+    else if (c.fase === 'en_proceso') {
+      // Map based on progress for en_proceso
+      if (c.porcentaje_avance >= 50) etapa = 'Ejecución';
+      else if (c.porcentaje_avance >= 25) etapa = 'Gestión';
+      else etapa = 'Planeación';
+    } else if (c.fase === 'no_iniciado') etapa = 'No iniciado';
 
-  for (let i = 0; i < numCompromisos; i++) {
-    const etapa = etapas[Math.floor(Math.random() * 5)];
-    let avance = 0;
-    if (etapa === 'No iniciado') avance = 0;
-    else if (etapa === 'Planeación') avance = Math.floor(Math.random() * 25) + 5;
-    else if (etapa === 'Gestión') avance = Math.floor(Math.random() * 20) + 30;
-    else if (etapa === 'Ejecución') avance = Math.floor(Math.random() * 30) + 50;
-    else if (etapa === 'Cumplido') avance = 100;
-
-    compromisos.push({
-      id: `CG-${String(Math.floor(Math.random() * 300) + 1).padStart(3, '0')}`,
-      titulo: [
-        'Construcción de hospitales de segundo nivel en zonas rurales',
-        'Ampliación de cobertura educativa en nivel medio superior',
-        'Modernización de infraestructura carretera estatal',
-        'Programa de vivienda digna para familias vulnerables',
-        'Implementación de centros de atención ciudadana digital',
-        'Fortalecimiento de seguridad pública municipal',
-        'Programa estatal de becas educativas',
-        'Recuperación y preservación de zonas arqueológicas',
-        'Ampliación de red de agua potable en comunidades rurales',
-        'Creación de centros de desarrollo infantil',
-      ][Math.floor(Math.random() * 10)],
+    return {
+      id: c.id,
+      titulo: c.nombre,
       etapa,
-      avance,
-      rol: roles[Math.floor(Math.random() * 2)],
-      categoria: ['Salud', 'Educación', 'Infraestructura', 'Bienestar Social', 'Seguridad'][Math.floor(Math.random() * 5)],
-      ultimaActualizacion: new Date(2025, 9, Math.floor(Math.random() * 30) + 1).toLocaleDateString('es-MX'),
-    });
-  }
-
-  return compromisos;
+      avance: c.porcentaje_avance,
+      rol: 'Responsable Principal', // This dependency is responsible
+      categoria: c.categoria || 'General',
+      ultimaActualizacion: new Date(c.updated_at).toLocaleDateString('es-MX'),
+      _original: c,
+    };
+  });
 };
 
 export function CompromisosByDependencyView({
@@ -73,9 +60,31 @@ export function CompromisosByDependencyView({
   onClose,
   onCompromisoClick,
 }: CompromisosByDependencyViewProps) {
-  const [compromisos] = useState(generateCompromisosForDependency(dependency.name));
+  const [compromisos, setCompromisos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filterEstatus, setFilterEstatus] = useState('todos');
   const [filterRol, setFilterRol] = useState('todos');
+
+  // Fetch compromisos for this dependency
+  useEffect(() => {
+    const fetchCompromisos = async () => {
+      try {
+        setLoading(true);
+        const result = await compromisosAPI.getByDependency(dependency.id);
+        const mappedData = mapApiDataToView(result.compromisos || []);
+        setCompromisos(mappedData);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching compromisos:', err);
+        setError('Error al cargar los compromisos');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompromisos();
+  }, [dependency.id]);
 
   // Calcular KPIs
   const totalCompromisos = compromisos.length;
@@ -108,6 +117,33 @@ export function CompromisosByDependencyView({
     if (avance >= 34) return '#F9A825';
     return '#D32F2F';
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto" style={{ color: '#582672' }} />
+          <p className="mt-4 text-gray-600">Cargando compromisos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 mx-auto text-red-500" />
+          <p className="mt-4 text-gray-600">{error}</p>
+          <Button onClick={onClose} className="mt-4">
+            Volver
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { 
-  ArrowLeft, 
-  FileCheck, 
-  Download, 
+import { useState, useEffect } from 'react';
+import {
+  ArrowLeft,
+  FileCheck,
+  Download,
   Filter,
   Search,
   TrendingUp,
@@ -15,19 +15,21 @@ import {
   Target,
   DollarSign,
   Map as MapIcon,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { motion } from 'motion/react';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { compromisosAPI, dependenciesAPI } from '../services/api';
 import { 
   PieChart, 
   Pie, 
@@ -57,7 +59,7 @@ interface CompromisosGeneralModuleProps {
   dependencies: Array<{ id: string; name: string }>;
 }
 
-// Municipios de Tlaxcala con coordenadas aproximadas para el mapa
+// Municipios de Tlaxcala con coordenadas aproximadas para el mapa (mock data for visualization)
 const municipiosTlaxcala = [
   { name: 'Tlaxcala', x: 50, y: 45, compromisos: 15, avance: 78, presupuesto: 45000000, metasImpacto: 28 },
   { name: 'Apizaco', x: 45, y: 30, compromisos: 12, avance: 65, presupuesto: 38000000, metasImpacto: 22 },
@@ -86,85 +88,60 @@ const ejesPlanEstatal = [
   'Eje 6: Seguridad y Justicia',
 ];
 
-// Generar 300 compromisos de la gobernadora
-const generateCompromisos = () => {
-  const compromisosBase = [
-    { titulo: 'Construcción de hospitales de segundo nivel en zonas rurales', categoria: 'Salud', eje: 0 },
-    { titulo: 'Ampliación de cobertura educativa en nivel medio superior', categoria: 'Educación', eje: 0 },
-    { titulo: 'Modernización de infraestructura carretera estatal', categoria: 'Infraestructura', eje: 2 },
-    { titulo: 'Programa de vivienda digna para familias vulnerables', categoria: 'Vivienda', eje: 0 },
-    { titulo: 'Implementación de centros de atención ciudadana digital', categoria: 'Gobierno Digital', eje: 4 },
-    { titulo: 'Fortalecimiento de seguridad pública municipal', categoria: 'Seguridad', eje: 5 },
-    { titulo: 'Programa estatal de becas educativas', categoria: 'Educación', eje: 0 },
-    { titulo: 'Recuperación y preservación de zonas arqueológicas', categoria: 'Cultura', eje: 1 },
-    { titulo: 'Ampliación de red de agua potable en comunidades rurales', categoria: 'Infraestructura', eje: 2 },
-    { titulo: 'Creación de centros de desarrollo infantil', categoria: 'Bienestar Social', eje: 0 },
-    { titulo: 'Modernización del transporte público estatal', categoria: 'Movilidad', eje: 2 },
-    { titulo: 'Programa de apoyo a microempresas locales', categoria: 'Desarrollo Económico', eje: 1 },
-    { titulo: 'Reforestación y conservación de áreas naturales', categoria: 'Medio Ambiente', eje: 3 },
-    { titulo: 'Construcción de mercados municipales modernos', categoria: 'Desarrollo Económico', eje: 1 },
-    { titulo: 'Programa de atención integral a personas con discapacidad', categoria: 'Bienestar Social', eje: 0 },
-    { titulo: 'Digitalización de trámites y servicios gubernamentales', categoria: 'Gobierno Digital', eje: 4 },
-    { titulo: 'Mejoramiento de centros de salud comunitarios', categoria: 'Salud', eje: 0 },
-    { titulo: 'Programa de capacitación técnica para jóvenes', categoria: 'Educación', eje: 1 },
-    { titulo: 'Construcción de espacios deportivos en municipios', categoria: 'Deporte', eje: 0 },
-    { titulo: 'Implementación de energías renovables en edificios públicos', categoria: 'Medio Ambiente', eje: 3 },
-  ];
+// Map real API data to component format
+const mapCompromisosData = (apiData: any[], dependenciesMap: Map<string, string>) => {
+  return apiData.map(c => {
+    // Map fase to etapa
+    let etapa = 'No iniciado';
+    if (c.fase === 'cumplido') etapa = 'Cumplido';
+    else if (c.fase === 'en_proceso') etapa = 'En proceso';
+    else if (c.fase === 'no_iniciado') etapa = 'No iniciado';
 
-  const etapas = ['No iniciado', 'En proceso', '50%', 'Cumplido'];
-  const prioridades = ['Alta', 'Media', 'Baja'];
+    // Use real budget data
+    const presupuestoEjercido = c.presupuesto_ejercido || 0;
+    // Estimate approved budget (since we only have ejercido)
+    const presupuestoAprobado = presupuestoEjercido > 0 ? Math.floor(presupuestoEjercido / (c.porcentaje_avance / 100 || 1)) : 0;
 
-  const compromisos = [];
-  for (let i = 0; i < 300; i++) {
-    const base = compromisosBase[i % compromisosBase.length];
-    const etapaIndex = Math.floor(Math.random() * 4);
-    const etapa = etapas[etapaIndex];
-    
-    let avance = 0;
-    if (etapa === 'No iniciado') avance = 0;
-    else if (etapa === 'En proceso') avance = Math.floor(Math.random() * 40) + 10;
-    else if (etapa === '50%') avance = Math.floor(Math.random() * 20) + 45;
-    else if (etapa === 'Cumplido') avance = 100;
+    // Count collaborating agencies (split by comma or newline)
+    const numIntervinientes = c.intervinientes && c.intervinientes !== 'N/A'
+      ? c.intervinientes.split(/[,\n]+/).filter((s: string) => s.trim().length > 0).length
+      : 1; // Just the main dependency if no intervinientes
 
-    const numIntervinientes = Math.floor(Math.random() * 5) + 2;
-    const prioridad = prioridades[Math.floor(Math.random() * 3)];
-    const presupuestoAprobado = Math.floor(Math.random() * 30000000) + 5000000;
-    const presupuestoModificado = presupuestoAprobado + Math.floor(Math.random() * 5000000) - 2000000;
-    const presupuestoEjercido = Math.floor(presupuestoModificado * (avance / 100));
-    const municipio = municipiosTlaxcala[Math.floor(Math.random() * municipiosTlaxcala.length)].name;
-
-    compromisos.push({
-      id: `CG-${String(i + 1).padStart(3, '0')}`,
-      titulo: `${base.titulo} ${i > 19 ? `- Fase ${Math.floor(i / 20) + 1}` : ''}`,
-      categoria: base.categoria,
-      eje: ejesPlanEstatal[base.eje],
+    return {
+      id: c.id,
+      titulo: c.nombre,
+      categoria: c.categoria || 'General',
+      eje: c.eje_estrategico,
       etapa,
-      avance,
-      prioridad,
-      dependenciaResponsable: `Dependencia ${Math.floor(Math.random() * 20) + 1}`,
+      avance: c.porcentaje_avance,
+      prioridad: c.porcentaje_avance >= 67 ? 'Alta' : c.porcentaje_avance >= 34 ? 'Media' : 'Baja',
+      dependenciaResponsable: dependenciesMap.get(c.dependency_id) || c.dependency_id,
       numIntervinientes,
-      ultimaActualizacion: new Date(2025, 9, Math.floor(Math.random() * 30) + 1).toLocaleDateString('es-MX'),
-      metaGeneral: `${Math.floor(Math.random() * 500) + 100} ${['personas beneficiadas', 'obras entregadas', 'servicios implementados'][Math.floor(Math.random() * 3)]}`,
+      ultimaActualizacion: new Date(c.updated_at).toLocaleDateString('es-MX'),
+      metaGeneral: `${c.meta_total} ${c.unidad_medida}`,
       presupuestoAprobado,
-      presupuestoModificado,
+      presupuestoModificado: presupuestoAprobado,
       presupuestoEjercido,
-      municipio,
-      año: 2024 + Math.floor(Math.random() * 2),
-    });
-  }
-
-  return compromisos;
+      municipio: c.municipio || 'Tlaxcala',
+      año: c.año_contexto,
+      beneficiarios: c.beneficiarios || 0,
+      // Add original data for detail view
+      _original: c,
+    };
+  });
 };
 
-export function CompromisosGeneralModule({ 
-  onClose, 
+export function CompromisosGeneralModule({
+  onClose,
   onCompromisoClick,
   onDependencyClick,
   onDashboardUnidadClick,
   onDashboardMunicipioClick,
   dependencies
 }: CompromisosGeneralModuleProps) {
-  const [compromisos] = useState(generateCompromisos());
+  const [compromisos, setCompromisos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEtapa, setFilterEtapa] = useState('todos');
   const [filterDependencia, setFilterDependencia] = useState('todos');
@@ -173,6 +150,66 @@ export function CompromisosGeneralModule({
   const [filterEje, setFilterEje] = useState('todos');
   const [hoveredMunicipio, setHoveredMunicipio] = useState<string | null>(null);
   const [selectedMunicipioMapa, setSelectedMunicipioMapa] = useState<string>('todos');
+
+  // Fetch real data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch all compromisos from all dependencies
+        const promises = dependencies.map(dep =>
+          compromisosAPI.getByDependency(dep.id).catch(() => ({ compromisos: [] }))
+        );
+
+        const results = await Promise.all(promises);
+
+        // Flatten all compromisos
+        const allCompromisos = results.flatMap(result => result.compromisos || []);
+
+        // Deduplicate by compromiso_numero or id (keep first occurrence)
+        const uniqueCompromisos = Array.from(
+          allCompromisos.reduce((map, c) => {
+            const key = c.compromiso_numero || c.id;
+            if (!map.has(key)) {
+              map.set(key, c);
+            }
+            return map;
+          }, new Map()).values()
+        );
+
+        // Create dependencies map for names
+        const depMap = new Map(dependencies.map(d => [d.id, d.name]));
+
+        // Map to component format
+        const mappedCompromisos = mapCompromisosData(uniqueCompromisos, depMap);
+
+        // Sort by priority: Alta (high) first, then Media (medium), then Baja (low)
+        // Within same priority, sort by avance (highest first)
+        const sortedCompromisos = mappedCompromisos.sort((a, b) => {
+          const priorityOrder = { 'Alta': 1, 'Media': 2, 'Baja': 3 };
+          const priorityDiff = priorityOrder[a.prioridad] - priorityOrder[b.prioridad];
+
+          if (priorityDiff !== 0) return priorityDiff;
+
+          // Same priority, sort by avance (highest first)
+          return b.avance - a.avance;
+        });
+
+        setCompromisos(sortedCompromisos);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching compromisos:', err);
+        setError('Error al cargar los compromisos');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (dependencies.length > 0) {
+      fetchData();
+    }
+  }, [dependencies]);
 
   // Calcular estadísticas
   const total = compromisos.length;
@@ -185,13 +222,28 @@ export function CompromisosGeneralModule({
   const totalPresupuestoModificado = compromisos.reduce((acc, c) => acc + c.presupuestoModificado, 0);
   const totalPresupuestoEjercido = compromisos.reduce((acc, c) => acc + c.presupuestoEjercido, 0);
 
-  // Calcular presupuesto y beneficiados por año
+  // Calcular presupuesto y beneficiados por año from REAL DATA
   const presupuestoPorAño = {
-    2021: { presupuesto: 2450000000, beneficiados: 185000 },
-    2022: { presupuesto: 2780000000, beneficiados: 225000 },
-    2023: { presupuesto: 3120000000, beneficiados: 268000 },
-    2024: { presupuesto: compromisos.filter(c => c.año === 2024).reduce((acc, c) => acc + c.presupuestoEjercido, 0), beneficiados: 312000 },
-    2025: { presupuesto: compromisos.filter(c => c.año === 2025).reduce((acc, c) => acc + c.presupuestoEjercido, 0), beneficiados: 145000 },
+    2021: {
+      presupuesto: compromisos.reduce((acc, c) => acc + (c._original?.presupuesto_2021 || 0), 0),
+      beneficiados: compromisos.reduce((acc, c) => acc + (c._original?.beneficiarios || 0), 0)
+    },
+    2022: {
+      presupuesto: compromisos.reduce((acc, c) => acc + (c._original?.presupuesto_2022 || 0), 0),
+      beneficiados: compromisos.reduce((acc, c) => acc + (c._original?.beneficiarios || 0), 0)
+    },
+    2023: {
+      presupuesto: compromisos.reduce((acc, c) => acc + (c._original?.presupuesto_2023 || 0), 0),
+      beneficiados: compromisos.reduce((acc, c) => acc + (c._original?.beneficiarios || 0), 0)
+    },
+    2024: {
+      presupuesto: compromisos.reduce((acc, c) => acc + (c._original?.presupuesto_2024 || 0), 0),
+      beneficiados: compromisos.reduce((acc, c) => acc + (c._original?.beneficiarios || 0), 0)
+    },
+    2025: {
+      presupuesto: compromisos.reduce((acc, c) => acc + (c._original?.presupuesto_2025 || 0), 0),
+      beneficiados: compromisos.reduce((acc, c) => acc + (c._original?.beneficiarios || 0), 0)
+    },
   };
 
   const acumuladoHistorico = {
@@ -201,6 +253,41 @@ export function CompromisosGeneralModule({
 
   const avanceGlobal = compromisos.reduce((acc, c) => acc + c.avance, 0) / total;
   const cumplimientoGlobal = (cumplidos / total) * 100;
+
+  // Calculate REAL metas data from compromisos
+  // 1. Find compromisos with most beneficiarios (completed ones)
+  const completedCompromisos = compromisos.filter(c => c.etapa === 'Cumplido');
+  const topByBeneficiarios = [...completedCompromisos]
+    .sort((a, b) => b.beneficiarios - a.beneficiarios)
+    .slice(0, 2);
+
+  // 2. Calculate metas by municipio
+  const metasPorMunicipio = compromisos
+    .filter(c => c.etapa === 'Cumplido') // Only count completed
+    .reduce((acc, c) => {
+      const municipio = c.municipio || 'Tlaxcala';
+      if (!acc[municipio]) {
+        acc[municipio] = new Set();
+      }
+      if (c._original?.compromiso_numero) {
+        acc[municipio].add(c._original.compromiso_numero);
+      }
+      return acc;
+    }, {} as Record<string, Set<string>>);
+
+  // Convert to array and sort by number of metas
+  const municipiosConMetas = Object.entries(metasPorMunicipio)
+    .map(([name, metas]) => ({ name, count: metas.size }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
+
+  // 3. Count unique metas across all compromisos
+  const totalMetasUnicas = new Set(
+    compromisos
+      .filter(c => c.etapa === 'Cumplido')
+      .map(c => c._original?.compromiso_numero)
+      .filter(Boolean)
+  ).size;
 
   // Semáforo global
   const getSemaforoGlobal = () => {
@@ -283,6 +370,33 @@ export function CompromisosGeneralModule({
     return '#EF5350';
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto" style={{ color: '#582672' }} />
+          <p className="mt-4 text-gray-600">Cargando compromisos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 mx-auto text-red-500" />
+          <p className="mt-4 text-gray-600">{error}</p>
+          <Button onClick={() => window.location.reload()} className="mt-4">
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -307,7 +421,7 @@ export function CompromisosGeneralModule({
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-xs text-gray-500 mb-1">Índice de cumplimiento global</p>
@@ -460,98 +574,73 @@ export function CompromisosGeneralModule({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2.5">
-                {/* Metas con mayor número de municipios impactados */}
-                <Card className="border-2 border-green-200 bg-white hover:shadow-lg transition-shadow">
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3220' }}>
-                        <MapIcon className="w-4 h-4" style={{ color: '#2E7D32' }} />
+                {/* Top 2 compromisos by beneficiarios - REAL DATA */}
+                {topByBeneficiarios.map((compromiso, index) => (
+                  <Card key={compromiso.id} className={index === 0 ? "border-2 border-green-200 bg-white hover:shadow-lg transition-shadow" : "border border-green-200 bg-white hover:shadow-md transition-shadow"}>
+                    <CardContent className="p-3">
+                      <div className="flex items-start gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: index === 0 ? '#2E7D3220' : '#2E7D3215' }}>
+                          <Users className="w-4 h-4" style={{ color: '#2E7D32' }} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-600 mb-0.5">
+                            {index === 0 ? 'Mayor Cobertura' : 'Alta Cobertura'}
+                          </p>
+                          <p className="text-sm line-clamp-2" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                            {compromiso.titulo}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-600 mb-0.5">Mayor Cobertura Geográfica</p>
-                        <p className="text-sm" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
-                          Ampliación de red de agua potable
-                        </p>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-600">Municipio:</span>
+                          <Badge className="text-xs" style={{ backgroundColor: '#2E7D3220', color: '#2E7D32', fontWeight: 'bold' }}>
+                            {compromiso.municipio}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-600">Beneficiarios:</span>
+                          <span className="text-xs" style={{ fontWeight: 'bold' }}>
+                            {compromiso.beneficiarios.toLocaleString('es-MX')} personas
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-600">Avance:</span>
+                          <span className="text-xs" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                            {compromiso.avance}%
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Municipios impactados:</span>
-                        <Badge className="text-xs" style={{ backgroundColor: '#2E7D3220', color: '#2E7D32', fontWeight: 'bold' }}>
-                          12 municipios
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Beneficiarios:</span>
-                        <span className="text-xs" style={{ fontWeight: 'bold' }}>45,230 personas</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ))}
 
-                {/* Segunda meta destacada */}
-                <Card className="border border-green-200 bg-white hover:shadow-md transition-shadow">
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E7D3215' }}>
-                        <Users className="w-4 h-4" style={{ color: '#2E7D32' }} />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600 mb-0.5">Amplia Cobertura</p>
-                        <p className="text-sm" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
-                          Programa estatal de becas
-                        </p>
-                      </div>
-                    </div>
+                {/* Metas más constantes en municipios - REAL DATA */}
+                {municipiosConMetas.length > 0 && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs mb-2" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
+                      Municipios con Más Metas Cumplidas
+                    </p>
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Municipios impactados:</span>
-                        <Badge className="text-xs" style={{ backgroundColor: '#2E7D3215', color: '#2E7D32', fontWeight: 'bold' }}>
-                          11 municipios
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Beneficiarios:</span>
-                        <span className="text-xs" style={{ fontWeight: 'bold' }}>38,450 estudiantes</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Metas más constantes en municipios */}
-                <div className="pt-2 border-t">
-                  <p className="text-xs mb-2" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
-                    Metas Más Constantes por Municipio
-                  </p>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between p-1.5 bg-green-50 rounded">
-                      <span className="text-xs">Tlaxcala</span>
-                      <Badge variant="outline" className="text-xs">28 metas</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-1.5 bg-green-50 rounded">
-                      <span className="text-xs">Apizaco</span>
-                      <Badge variant="outline" className="text-xs">22 metas</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-1.5 bg-green-50 rounded">
-                      <span className="text-xs">Huamantla</span>
-                      <Badge variant="outline" className="text-xs">18 metas</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-1.5 bg-green-50 rounded">
-                      <span className="text-xs">Zacatelco</span>
-                      <Badge variant="outline" className="text-xs">17 metas</Badge>
+                      {municipiosConMetas.map(municipio => (
+                        <div key={municipio.name} className="flex items-center justify-between p-1.5 bg-green-50 rounded">
+                          <span className="text-xs">{municipio.name}</span>
+                          <Badge variant="outline" className="text-xs">{municipio.count} metas</Badge>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* Estadística general */}
+                {/* Estadística general - REAL DATA */}
                 <Card className="bg-green-50 border-green-200">
                   <CardContent className="p-2.5">
                     <div className="text-center">
                       <p className="text-xl mb-0.5" style={{ fontWeight: 'bold', color: '#2E7D32' }}>
-                        {municipiosTlaxcala.reduce((sum, m) => sum + m.metasImpacto, 0)}
+                        {totalMetasUnicas}
                       </p>
                       <p className="text-xs text-gray-600">
-                        Total de metas implementadas en el estado
+                        Metas únicas cumplidas en el estado
                       </p>
                     </div>
                   </CardContent>

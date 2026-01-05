@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, BarChart3, CheckCircle2, AlertTriangle, Download, FileText, TrendingUp, Search, RotateCcw, Clock, Target, Award } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, BarChart3, CheckCircle2, AlertTriangle, Download, FileText, TrendingUp, Search, RotateCcw, Clock, Target, Award, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Progress } from './ui/progress';
 import { motion } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { indicadoresAPI } from '@/services/api';
 
 interface IndicadoresGeneralModuleProps {
   onClose: () => void;
@@ -30,43 +31,101 @@ export function IndicadoresGeneralModule({ onClose, onDependencyClick, dependenc
   const [selectedDependency, setSelectedDependency] = useState<string>('todas');
   const [selectedEje, setSelectedEje] = useState<string>('todos');
   const [selectedPrograma, setSelectedPrograma] = useState<string>('todos');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [indicadoresData, setIndicadoresData] = useState<any[]>([]);
 
   // Función para formatear números
   const formatNumber = (value: number) => {
     return new Intl.NumberFormat('es-MX').format(value);
   };
 
-  // Generar datos de cumplimiento de indicadores para cada dependencia
-  const generateIndicadoresData = (depId: string, depName: string, indicadoresPercent: number) => {
-    const total_indicadores = Math.floor(Math.random() * 15) + 8; // 8-22 indicadores
-    const indicadores_cumplidos = Math.floor((indicadoresPercent / 100) * total_indicadores);
-    const indicadores_en_riesgo = Math.floor((total_indicadores - indicadores_cumplidos) * 0.6);
-    const indicadores_no_cumplidos = total_indicadores - indicadores_cumplidos - indicadores_en_riesgo;
-    const icd = indicadoresPercent;
-    
-    // Generar tendencia aleatoria
-    const trendValue = Math.random();
-    let trend: 'up' | 'down' | 'stable';
-    if (trendValue > 0.6) trend = 'up';
-    else if (trendValue < 0.3) trend = 'down';
-    else trend = 'stable';
-    
-    return {
-      id: depId,
-      name: depName,
-      total_indicadores,
-      indicadores_cumplidos,
-      indicadores_en_riesgo,
-      indicadores_no_cumplidos,
-      icd,
-      trend,
-    };
+  // Función para calcular cumplimiento de un indicador
+  const calculateCumplimiento = (meta: number, avance: number) => {
+    if (meta === 0) return 0;
+    return (avance / meta) * 100;
   };
 
-  // Datos de cumplimiento de todas las dependencias
-  const indicadoresData = dependencies.map(dep => 
-    generateIndicadoresData(dep.id, dep.name, dep.modules.indicadores)
-  );
+  // Fetch real data from API
+  useEffect(() => {
+    const fetchAllIndicadores = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch indicators for all dependencies in parallel
+        const promises = dependencies.map(dep =>
+          indicadoresAPI.getByDependency(dep.id, 2026, 4)
+            .then(response => ({
+              dependencyId: dep.id,
+              dependencyName: dep.name,
+              indicadores: response.indicadores || []
+            }))
+            .catch(err => ({
+              dependencyId: dep.id,
+              dependencyName: dep.name,
+              indicadores: []
+            }))
+        );
+
+        const results = await Promise.all(promises);
+
+        // Process results to calculate stats for each dependency
+        const processedData = results.map(result => {
+          const indicadores = result.indicadores;
+          const total_indicadores = indicadores.length;
+
+          // Calculate cumplimiento for each indicator
+          const indicadoresConCumplimiento = indicadores.map((ind: any) => ({
+            ...ind,
+            cumplimiento: calculateCumplimiento(ind.meta, ind.avance)
+          }));
+
+          // Count indicators by status
+          const indicadores_cumplidos = indicadoresConCumplimiento.filter(
+            (ind: any) => ind.cumplimiento >= 67
+          ).length;
+
+          const indicadores_en_riesgo = indicadoresConCumplimiento.filter(
+            (ind: any) => ind.cumplimiento >= 34 && ind.cumplimiento < 67
+          ).length;
+
+          const indicadores_no_cumplidos = indicadoresConCumplimiento.filter(
+            (ind: any) => ind.cumplimiento < 34
+          ).length;
+
+          // Calculate ICD (average cumplimiento)
+          const icd = total_indicadores > 0
+            ? indicadoresConCumplimiento.reduce((sum: number, ind: any) => sum + ind.cumplimiento, 0) / total_indicadores
+            : 0;
+
+          // Determine trend (for now, stable - could be calculated from historical data)
+          const trend: 'up' | 'down' | 'stable' = 'stable';
+
+          return {
+            id: result.dependencyId,
+            name: result.dependencyName,
+            total_indicadores,
+            indicadores_cumplidos,
+            indicadores_en_riesgo,
+            indicadores_no_cumplidos,
+            icd,
+            trend,
+            rawIndicadores: indicadores
+          };
+        });
+
+        setIndicadoresData(processedData);
+      } catch (err: any) {
+        console.error('Error fetching indicadores:', err);
+        setError(err.message || 'Error al cargar indicadores');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllIndicadores();
+  }, [dependencies]);
 
   // Filtrar datos según búsqueda y selección
   const filteredData = indicadoresData.filter(dep => {
@@ -222,6 +281,47 @@ export function IndicadoresGeneralModule({ onClose, onDependencyClick, dependenc
       </div>
 
       <div className="container mx-auto px-6 py-8">
+        {/* Loading State */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-12 h-12 animate-spin mb-4" style={{ color: '#582672' }} />
+            <p className="text-lg text-gray-600">Cargando indicadores de todas las dependencias...</p>
+            <p className="text-sm text-gray-500 mt-2">Esto puede tomar unos segundos</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl mx-auto"
+          >
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-red-900 mb-2">Error al cargar datos</h3>
+                    <p className="text-sm text-red-700 mb-4">{error}</p>
+                    <Button
+                      onClick={() => window.location.reload()}
+                      variant="outline"
+                      className="border-red-300 hover:bg-red-100"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Reintentar
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Main Content - Only show when not loading and no error */}
+        {!loading && !error && (
+          <>
         {/* Barra de filtros */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -565,6 +665,8 @@ export function IndicadoresGeneralModule({ onClose, onDependencyClick, dependenc
             </CardContent>
           </Card>
         </motion.div>
+          </>
+        )}
       </div>
 
       {/* Pie de página */}

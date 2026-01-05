@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import cgpiLogoWhite from 'figma:asset/291258f4647a47d5b6b7a797f2aa3e8d49249464.png';
+import cgpiLogoWhite from '../assets/logo.png';
 import { Lock, User, AlertCircle, Shield, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';

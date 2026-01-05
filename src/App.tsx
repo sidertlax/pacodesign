@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LoginScreen } from "./components/LoginScreen";
 import { MagicLinkSignIn } from "./components/MagicLinkSignIn";
 import { EnlaceView } from "./components/EnlaceView";
@@ -20,6 +20,7 @@ import {
   Scale,
   HardHat,
 } from "lucide-react";
+import { dependenciesAPI } from "./services/api";
 
 // Mock data for 60 dependencies
 const generateDependencies = () => {
@@ -128,7 +129,8 @@ const generateDependencies = () => {
   });
 };
 
-const dependencies = generateDependencies();
+// Fetch real dependencies from API (replaced mock generator)
+// const dependencies = generateDependencies();
 
 // Función para generar datos de detalle de dependencia
 const generateDependencyDetail = (
@@ -203,6 +205,39 @@ export default function App() {
     id: string;
     name: string;
   } | null>(null);
+
+  // Real dependencies from API
+  const [dependencies, setDependencies] = useState<any[]>([]);
+  const [loadingDependencies, setLoadingDependencies] = useState(true);
+
+  // Fetch real dependencies on mount
+  useEffect(() => {
+    const fetchDependencies = async () => {
+      try {
+        setLoadingDependencies(true);
+        const response = await dependenciesAPI.getAll();
+        // Map API response to match expected format
+        const mappedDeps = response.dependencies.map((dep: any) => ({
+          id: dep.id,
+          name: dep.name,
+          modules: {
+            gasto: Math.floor(Math.random() * 30) + 70, // Mock percentages for now
+            indicadores: Math.floor(Math.random() * 30) + 70,
+            compromisos: Math.floor(Math.random() * 30) + 70,
+            normatividad: Math.floor(Math.random() * 30) + 70,
+          }
+        }));
+        setDependencies(mappedDeps);
+      } catch (error) {
+        console.error('Error fetching dependencies:', error);
+        // Fallback to mock data if API fails
+        setDependencies(generateDependencies());
+      } finally {
+        setLoadingDependencies(false);
+      }
+    };
+    fetchDependencies();
+  }, []);
   const [currentView, setCurrentView] = useState<
     | "dashboard"
     | "gasto"

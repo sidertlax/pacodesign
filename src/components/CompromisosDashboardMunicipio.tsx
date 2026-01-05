@@ -177,10 +177,41 @@ export function CompromisosDashboardMunicipio({ onClose, año: añoInicial }: Da
       </div>
 
       <div className="container mx-auto px-6 py-8">
+        {/* Warning Banner - DEMO DATA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <Card className="border-2 border-orange-300 bg-orange-50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-orange-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-orange-900 mb-2">
+                    ⚠️ DATOS DE DEMOSTRACIÓN - Municipio No Disponible
+                  </p>
+                  <p className="text-xs text-orange-800 mb-2">
+                    Este dashboard actualmente muestra <strong>datos simulados para fines de demostración</strong>.
+                    El campo "municipio" no está presente en el archivo compromisos.xlsx actual.
+                  </p>
+                  <div className="bg-orange-100 border border-orange-300 rounded p-2 mt-2">
+                    <p className="text-xs font-bold text-orange-900 mb-1">📋 Para activar datos reales:</p>
+                    <p className="text-xs text-orange-800">
+                      Solicitar agregar la columna <strong>"MUNICIPIO"</strong> al archivo compromisos.xlsx con el nombre del municipio para cada compromiso.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Mapa principal */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
           className="mb-6"
         >
           <Card>

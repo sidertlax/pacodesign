@@ -140,8 +140,14 @@ export function DependencyTable({
   ];
 
   const getRandomResponsible = (depId: string) => {
-    // Use dependency ID to ensure consistent random selection
-    const index = parseInt(depId.replace('dep-', '')) % responsibleNames.length;
+    // Hash dependency ID for consistent selection
+    let hash = 0;
+    const idStr = depId.replace('dep-', '');
+    for (let i = 0; i < idStr.length; i++) {
+      hash = ((hash << 5) - hash) + idStr.charCodeAt(i);
+      hash = hash & hash;
+    }
+    const index = Math.abs(hash) % responsibleNames.length;
     return responsibleNames[index];
   };
 
@@ -313,8 +319,16 @@ export function DependencyTable({
         address: 'Av. de los Maestros No. 101, Col. Centro, Tlaxcala de Xicohténcatl, Tlax.'
       }
     ];
-    
-    const index = parseInt(depId.replace('dep-', '')) % contacts.length;
+
+    // Hash the dependency ID to get a consistent index
+    // Works with both numeric IDs (dep-0) and text IDs (dep-secretaria-de-infraestructura)
+    let hash = 0;
+    const idStr = depId.replace('dep-', '');
+    for (let i = 0; i < idStr.length; i++) {
+      hash = ((hash << 5) - hash) + idStr.charCodeAt(i);
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    const index = Math.abs(hash) % contacts.length;
     return contacts[index];
   };
 

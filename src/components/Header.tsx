@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import cgpiLogo from 'figma:asset/2d625ad7f36a46709a1af6e4574d72029b82c6ea.png';
+import cgpiLogo from '../assets/logo.png';
 import { DollarSign, TrendingUp, ClipboardCheck, Gavel, Construction, LogOut, User } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Button } from './ui/button';

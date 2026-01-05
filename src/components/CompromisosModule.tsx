@@ -106,6 +106,7 @@ export function CompromisosModule({
       <CompromisosDashboardUnidadMedida
         onClose={handleBackToGeneral}
         año={añoContexto}
+        dependencies={dependencies}
       />
     );
   }

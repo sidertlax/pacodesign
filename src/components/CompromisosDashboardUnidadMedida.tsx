@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Download,
@@ -10,6 +10,7 @@ import {
   TrendingUp,
   FileText,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -31,87 +32,113 @@ import {
   TableHeader,
   TableRow,
 } from './ui/table';
+import { compromisosAPI } from '../services/api';
 
 interface DashboardUnidadMedidaProps {
   onClose: () => void;
   año: string;
+  dependencies: Array<{ id: string; name: string }>;
 }
 
-// Datos mock
-const unidadesMedida = [
-  'Personas beneficiadas',
-  'Obras entregadas',
-  'Servicios implementados',
-  'Equipamientos realizados',
-  'Capacitaciones impartidas',
-  'Apoyos entregados',
-];
+interface CompromisoRow {
+  id: string;
+  municipio: string;
+  dependencia: string;
+  compromiso: string;
+  meta: string;
+  unidadMedida: string;
+  cantidad: number;
+  año: number;
+  avance: number;
+}
 
-const dependencias = [
-  'Secretaría de Educación Pública',
-  'Secretaría de Salud',
-  'Secretaría de Desarrollo Social',
-  'Secretaría de Obras Públicas',
-  'Secretaría de Desarrollo Económico',
-  'DIF Estatal',
-];
-
-const municipiosTlaxcala = [
-  'Tlaxcala', 'Apizaco', 'Huamantla', 'Chiautempan', 'Tlaxco',
-  'Calpulalpan', 'Zacatelco', 'San Pablo del Monte', 'Papalotla',
-  'Contla de Juan Cuamatzi', 'Tetla de la Solidaridad',
-];
-
-// Generar datos de compromisos por unidad de medida
-const generateDataPorUnidad = () => {
-  const data = [];
-  const compromisos = [
-    'Construcción de centros de salud',
-    'Programa de becas educativas',
-    'Modernización de infraestructura vial',
-    'Ampliación de red de agua potable',
-    'Construcción de centros deportivos',
-    'Programa de apoyo a microempresas',
-    'Mejoramiento de espacios públicos',
-    'Construcción de mercados municipales',
-  ];
-
-  for (let i = 0; i < 100; i++) {
-    data.push({
-      id: i + 1,
-      municipio: municipiosTlaxcala[Math.floor(Math.random() * municipiosTlaxcala.length)],
-      dependencia: dependencias[Math.floor(Math.random() * dependencias.length)],
-      compromiso: compromisos[Math.floor(Math.random() * compromisos.length)],
-      meta: `Meta ${Math.floor(Math.random() * 3) + 1}`,
-      unidadMedida: unidadesMedida[Math.floor(Math.random() * unidadesMedida.length)],
-      cantidad: Math.floor(Math.random() * 1000) + 50,
-      año: 2024 + Math.floor(Math.random() * 2),
-    });
-  }
-
-  return data;
-};
-
-export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial }: DashboardUnidadMedidaProps) {
-  const [dataCompleta] = useState(generateDataPorUnidad());
-  const [unidadSeleccionada, setUnidadSeleccionada] = useState<string>('Personas beneficiadas');
+export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial, dependencies }: DashboardUnidadMedidaProps) {
+  const [dataCompleta, setDataCompleta] = useState<CompromisoRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [unidadesMedida, setUnidadesMedida] = useState<string[]>([]);
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState<string>('');
   const [año, setAño] = useState(añoInicial || 'todos');
   const [dependenciaFiltro, setDependenciaFiltro] = useState('todos');
-  const [municipioFiltro, setMunicipioFiltro] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+
+  // Fetch real data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch all compromisos from all dependencies
+        const promises = dependencies.map(dep =>
+          compromisosAPI.getByDependency(dep.id).catch(() => ({ compromisos: [] }))
+        );
+
+        const results = await Promise.all(promises);
+        const allCompromisos = results.flatMap(result => result.compromisos || []);
+
+        // Deduplicate by compromiso_numero (same as CompromisosGeneralModule)
+        const uniqueCompromisos = Array.from(
+          allCompromisos.reduce((map, c) => {
+            const key = c.compromiso_numero || c.id;
+            if (!map.has(key)) {
+              map.set(key, c);
+            }
+            return map;
+          }, new Map()).values()
+        );
+
+        // Create dependencies map
+        const depMap = new Map(dependencies.map(d => [d.id, d.name]));
+
+        // Transform to table format (use UNIQUE compromisos only)
+        const tableData: CompromisoRow[] = uniqueCompromisos.map(c => ({
+          id: c.id,
+          municipio: c.municipio || 'N/A', // ⚠️ MISSING IN DATABASE
+          dependencia: depMap.get(c.dependency_id) || c.dependency_id,
+          compromiso: c.nombre,
+          meta: `${c.meta_total}`, // Just the number
+          unidadMedida: c.unidad_medida,
+          cantidad: c.meta_total || 0,
+          año: c.año_contexto,
+          avance: c.porcentaje_avance || 0
+        }));
+
+        setDataCompleta(tableData);
+
+        // Extract unique unidades de medida
+        const uniqueUnidades = Array.from(
+          new Set(tableData.map(d => d.unidadMedida))
+        ).sort();
+
+        setUnidadesMedida(uniqueUnidades);
+
+        // Set default selection to first unidad
+        if (uniqueUnidades.length > 0) {
+          setUnidadSeleccionada(uniqueUnidades[0]);
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching compromisos:', error);
+        setLoading(false);
+      }
+    };
+
+    if (dependencies.length > 0) {
+      fetchData();
+    }
+  }, [dependencies]);
 
   // Filtrar datos
   const dataFiltrada = dataCompleta.filter(item => {
     const matchUnidad = item.unidadMedida === unidadSeleccionada;
     const matchAño = año === 'todos' || item.año.toString() === año;
     const matchDependencia = dependenciaFiltro === 'todos' || item.dependencia === dependenciaFiltro;
-    const matchMunicipio = municipioFiltro === 'todos' || item.municipio === municipioFiltro;
     const matchSearch = item.compromiso.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         item.meta.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchUnidad && matchAño && matchDependencia && matchMunicipio && matchSearch;
+
+    return matchUnidad && matchAño && matchDependencia && matchSearch;
   });
 
   // Calcular total acumulado
@@ -124,9 +151,26 @@ export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial }:
   const dataPaginada = dataFiltrada.slice(startIndex, endIndex);
 
   // Calcular estadísticas
-  const municipiosUnicos = new Set(dataFiltrada.map(d => d.municipio)).size;
+  const municipiosUnicos = new Set(dataFiltrada.filter(d => d.municipio !== 'N/A').map(d => d.municipio)).size;
   const dependenciasUnicas = new Set(dataFiltrada.map(d => d.dependencia)).size;
-  const compromisosUnicos = new Set(dataFiltrada.map(d => d.compromiso)).size;
+  const compromisosUnicos = dataFiltrada.length;
+
+  // Get unique dependencies for filter
+  const dependenciasList = Array.from(
+    new Set(dataCompleta.map(d => d.dependencia))
+  ).sort();
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto" style={{ color: '#582672' }} />
+          <p className="mt-4 text-gray-600">Cargando datos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -148,7 +192,7 @@ export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial }:
                   Dashboard por Unidad de Medida
                 </h1>
                 <p className="text-sm text-gray-600 mt-1">
-                  Análisis de acciones por tipo de indicador y distribución municipal
+                  Análisis de acciones por tipo de indicador — {dataCompleta.length} compromisos únicos
                 </p>
               </div>
             </div>
@@ -191,7 +235,10 @@ export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial }:
                 <div>
                   <p className="text-sm text-gray-600 mb-1">MUNICIPIOS</p>
                   <p className="text-3xl" style={{ fontWeight: 'bold', color: '#1976D2' }}>
-                    {municipiosUnicos}
+                    {municipiosUnicos > 0 ? municipiosUnicos : 'N/A'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {municipiosUnicos === 0 && '⚠️ Sin datos'}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#1976D220' }}>
@@ -264,10 +311,13 @@ export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial }:
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {unidadesMedida.length} unidades de medida disponibles
+                </p>
               </div>
 
               {/* Filtros secundarios */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm text-gray-600 mb-2">AÑO</label>
                   <Select value={año} onValueChange={(value) => { setAño(value); setCurrentPage(1); }}>
@@ -278,6 +328,7 @@ export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial }:
                       <SelectItem value="todos">Todos los años</SelectItem>
                       <SelectItem value="2024">2024</SelectItem>
                       <SelectItem value="2025">2025</SelectItem>
+                      <SelectItem value="2026">2026</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -290,23 +341,8 @@ export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial }:
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todos">Todas las dependencias</SelectItem>
-                      {dependencias.map(dep => (
+                      {dependenciasList.map(dep => (
                         <SelectItem key={dep} value={dep}>{dep}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">MUNICIPIO</label>
-                  <Select value={municipioFiltro} onValueChange={(value) => { setMunicipioFiltro(value); setCurrentPage(1); }}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos los municipios</SelectItem>
-                      {municipiosTlaxcala.map(mun => (
-                        <SelectItem key={mun} value={mun}>{mun}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -336,7 +372,6 @@ export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial }:
                   onClick={() => {
                     setAño('todos');
                     setDependenciaFiltro('todos');
-                    setMunicipioFiltro('todos');
                     setSearchTerm('');
                     setCurrentPage(1);
                   }}
@@ -358,70 +393,74 @@ export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial }:
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2" style={{ color: '#582672', fontWeight: 'bold' }}>
                 <TrendingUp className="w-5 h-5" />
-                RESULTADOS POR MUNICIPIO
+                RESULTADOS
               </CardTitle>
             </CardHeader>
             <CardContent>
               {dataFiltrada.length > 0 ? (
                 <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>MUNICIPIO</TableHead>
-                        <TableHead>DEPENDENCIA</TableHead>
-                        <TableHead>COMPROMISO</TableHead>
-                        <TableHead>META</TableHead>
-                        <TableHead className="text-right">CANTIDAD</TableHead>
-                        <TableHead className="text-center">AÑO</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dataPaginada.map((item, index) => (
-                        <TableRow key={index} className="hover:bg-gray-50">
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4 text-gray-400" />
-                              <span style={{ fontWeight: 'bold', color: '#374151' }}>{item.municipio}</span>
+                  {/* Card-based layout instead of table */}
+                  <div className="space-y-3">
+                    {dataPaginada.map((item) => (
+                      <Card key={item.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4 mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <span className="text-sm font-medium text-gray-600">{item.dependencia}</span>
+                                <Badge
+                                  className="ml-auto"
+                                  style={{
+                                    backgroundColor: item.avance >= 67 ? '#2E7D3220' : item.avance >= 34 ? '#F9A82520' : '#D32F2F20',
+                                    color: item.avance >= 67 ? '#2E7D32' : item.avance >= 34 ? '#F9A825' : '#D32F2F'
+                                  }}
+                                >
+                                  {item.avance}% avance
+                                </Badge>
+                              </div>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Building2 className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm text-gray-700">{item.dependencia}</span>
+                          </div>
+
+                          <p className="text-base text-gray-900 mb-3 leading-relaxed">
+                            {item.compromiso}
+                          </p>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <div className="flex items-center gap-4">
+                              <div className="text-sm">
+                                <span className="text-gray-500">Meta:</span>
+                                <span className="ml-2 font-bold" style={{ color: '#582672' }}>
+                                  {item.meta}
+                                </span>
+                              </div>
+                              <div className="text-sm">
+                                <span className="text-gray-500">Cantidad:</span>
+                                <span className="ml-2 font-bold text-lg" style={{ color: '#582672' }}>
+                                  {item.cantidad.toLocaleString('es-MX')}
+                                </span>
+                              </div>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <p className="text-sm text-gray-700">{item.compromiso}</p>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" style={{ borderColor: '#58267250', color: '#582672' }}>
-                              {item.meta}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className="text-lg" style={{ fontWeight: 'bold', color: '#582672' }}>
-                              {item.cantidad.toLocaleString('es-MX')}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge>{item.año}</Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {/* Fila de total */}
-                      <TableRow className="bg-purple-50 border-t-2 border-purple-200">
-                        <TableCell colSpan={4} className="text-right">
-                          <span style={{ fontWeight: 'bold', color: '#582672' }}>TOTAL ACUMULADO:</span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className="text-xl" style={{ fontWeight: 'bold', color: '#582672' }}>
-                            {totalAcumulado.toLocaleString('es-MX')}
-                          </span>
-                        </TableCell>
-                        <TableCell></TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                            <Badge variant="outline">{item.año}</Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {/* Total summary card */}
+                  <Card className="mt-4 border-2" style={{ borderColor: '#582672', backgroundColor: '#58267210' }}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold" style={{ color: '#582672' }}>
+                          TOTAL ACUMULADO:
+                        </span>
+                        <span className="text-2xl font-bold" style={{ color: '#582672' }}>
+                          {totalAcumulado.toLocaleString('es-MX')}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Paginación */}
                   {totalPages > 1 && (
@@ -459,6 +498,33 @@ export function CompromisosDashboardUnidadMedida({ onClose, año: añoInicial }:
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Warning about missing municipio data */}
+        {municipiosUnicos === 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-6"
+          >
+            <Card className="border-2 border-orange-200 bg-orange-50">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-orange-900 mb-1">
+                      ⚠️ Datos de Municipio No Disponibles
+                    </p>
+                    <p className="text-xs text-orange-700">
+                      El campo "municipio" no está presente en el archivo compromisos.xlsx.
+                      Por favor solicítelo en la reunión de hoy para completar esta información.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </div>
     </div>
   );

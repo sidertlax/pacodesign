@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, BarChart3, CheckCircle2, AlertTriangle, Download, FileText, TrendingUp, Clock, Upload, CheckCircle, XCircle, Eye, Target, Award } from 'lucide-react';
+import { indicadoresAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { Progress } from './ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { motion } from 'motion/react';
@@ -16,134 +18,51 @@ interface IndicadoresModuleProps {
 }
 
 export function IndicadoresModule({ onClose, dependencyId, dependencyName }: IndicadoresModuleProps) {
+  // State for API data
+  const [indicadores, setIndicadores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedIndicador, setSelectedIndicador] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
   // Función para formatear números
   const formatNumber = (value: number) => {
     return new Intl.NumberFormat('es-MX').format(value);
   };
 
-  // Generar datos de indicadores
-  const generateIndicadores = () => {
-    const indicadoresBase = [
-      {
-        nombre: 'Cobertura de servicios educativos',
-        unidad: 'Porcentaje',
-        tipo: 'Estratégico',
-        eje: 'PED - 1. EDUCACIÓN DE CALIDAD',
-        meta: 95,
-        avance: 87.5,
-        evidencia: 'evidencia_cobertura_educativa.pdf',
-        estadoValidacion: 'Validado',
-        observaciones: 'Cumple parcialmente. Se requiere reforzar atención en zonas rurales.',
-      },
-      {
-        nombre: 'Índice de satisfacción ciudadana',
-        unidad: 'Puntos',
-        tipo: 'Gestión',
-        eje: 'ADM - 1. MEJORA DE LA GESTIÓN PÚBLICA',
-        meta: 8.5,
-        avance: 7.8,
-        evidencia: 'evidencia_satisfaccion_ciudadana.pdf',
-        estadoValidacion: 'Validado',
-        observaciones: 'Avance favorable. Encuestas aplicadas según metodología aprobada.',
-      },
-      {
-        nombre: 'Reducción de tiempos de respuesta',
-        unidad: 'Días',
-        tipo: 'Gestión',
-        eje: 'ADM - 2. EFICIENCIA ADMINISTRATIVA',
-        meta: 15,
-        avance: 18,
-        evidencia: 'evidencia_tiempos_respuesta.pdf',
-        estadoValidacion: 'En revisión',
-        observaciones: 'No cumple meta. Se requiere análisis de procesos y ajuste de indicador.',
-      },
-      {
-        nombre: 'Programas implementados',
-        unidad: 'Número',
-        tipo: 'Gestión',
-        eje: 'PED - 2. DESARROLLO SOCIAL',
-        meta: 25,
-        avance: 22,
-        evidencia: 'evidencia_programas_sociales.pdf',
-        estadoValidacion: 'Validado',
-        observaciones: 'Buen avance. 3 programas adicionales en proceso de autorización.',
-      },
-      {
-        nombre: 'Beneficiarios atendidos',
-        unidad: 'Personas',
-        tipo: 'Estratégico',
-        eje: 'PED - 3. INCLUSIÓN SOCIAL',
-        meta: 50000,
-        avance: 45800,
-        evidencia: 'evidencia_beneficiarios.pdf',
-        estadoValidacion: 'Validado',
-        observaciones: 'Avance del 91.6%. Padrón actualizado conforme a normativa.',
-      },
-      {
-        nombre: 'Infraestructura mejorada',
-        unidad: 'Unidades',
-        tipo: 'Gestión',
-        eje: 'PED - 1. INFRAESTRUCTURA EDUCATIVA',
-        meta: 120,
-        avance: 135,
-        evidencia: 'evidencia_infraestructura.pdf',
-        estadoValidacion: 'Validado',
-        observaciones: 'Meta superada. Obras adicionales con recursos extraordinarios.',
-      },
-      {
-        nombre: 'Capacitaciones realizadas',
-        unidad: 'Eventos',
-        tipo: 'Gestión',
-        eje: 'ADM - 3. DESARROLLO DE CAPACIDADES',
-        meta: 48,
-        avance: 52,
-        evidencia: 'evidencia_capacitaciones.pdf',
-        estadoValidacion: 'Validado',
-        observaciones: 'Meta cumplida. Listas de asistencia y constancias entregadas.',
-      },
-      {
-        nombre: 'Eficiencia presupuestal',
-        unidad: 'Porcentaje',
-        tipo: 'Estratégico',
-        eje: 'ADM - 1. PRESUPUESTO BASADO EN RESULTADOS',
-        meta: 90,
-        avance: 73.5,
-        evidencia: 'evidencia_eficiencia_presupuestal.pdf',
-        estadoValidacion: 'Rechazado',
-        observaciones: 'Por debajo de meta. Evidencia requiere complemento documental.',
-      },
-      {
-        nombre: 'Porcentaje de proyectos con PBR evaluado',
-        unidad: 'Porcentaje',
-        tipo: 'Estratégico',
-        eje: 'ADM - 1. PRESUPUESTO BASADO EN RESULTADOS',
-        meta: 90,
-        avance: 85,
-        evidencia: 'evidencia_pbr_evaluado.pdf',
-        estadoValidacion: 'Validado',
-        observaciones: 'Cumplimiento favorable. Evaluaciones conforme a lineamientos CONAC.',
-      },
-      {
-        nombre: 'Índice de transparencia institucional',
-        unidad: 'Puntos',
-        tipo: 'Estratégico',
-        eje: 'ADM - 1. TRANSPARENCIA Y RENDICIÓN DE CUENTAS',
-        meta: 95,
-        avance: 92,
-        evidencia: 'evidencia_transparencia.pdf',
-        estadoValidacion: 'Validado',
-        observaciones: 'Cumplimiento alto. Portal de transparencia actualizado trimestralmente.',
-      },
-    ];
+  // Fetch indicadores from API
+  useEffect(() => {
+    const fetchIndicadores = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    return indicadoresBase.map((ind, index) => ({
-      id: `ind-${index}`,
-      ...ind,
-      cumplimiento: (ind.avance / ind.meta) * 100,
-    }));
-  };
+        const currentYear = new Date().getFullYear();
+        const response = await indicadoresAPI.getByDependency(dependencyId, currentYear, 4);
 
-  const indicadores = generateIndicadores();
+        // Map API data to component format and calculate cumplimiento
+        const mappedData = response.indicadores.map((ind: any) => ({
+          ...ind,
+          estadoValidacion: ind.estado_validacion === 'validado' ? 'Validado' :
+                           ind.estado_validacion === 'rechazado' ? 'Rechazado' :
+                           ind.estado_validacion === 'enviado' ? 'En revisión' :
+                           'Sin evidencia',
+          cumplimiento: (ind.avance / ind.meta) * 100,
+        }));
+
+        setIndicadores(mappedData);
+      } catch (err: any) {
+        console.error('Error fetching indicadores:', err);
+        setError(err.message || 'Error al cargar indicadores');
+        // Fallback to empty array on error
+        setIndicadores([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIndicadores();
+  }, [dependencyId]);
 
   // Calcular totales
   const total_indicadores = indicadores.length;
@@ -198,6 +117,39 @@ export function IndicadoresModule({ onClose, dependencyId, dependencyName }: Ind
     }
     return null;
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando indicadores...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Error al cargar indicadores</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="flex gap-2 justify-center">
+            <Button onClick={onClose} variant="outline">
+              Regresar
+            </Button>
+            <Button onClick={() => window.location.reload()}>
+              Reintentar
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -458,9 +410,16 @@ export function IndicadoresModule({ onClose, dependencyId, dependencyName }: Ind
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
-                              <Button size="sm" variant="outline">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedIndicador(ind);
+                                  setShowDetailModal(true);
+                                }}
+                              >
                                 <Eye className="w-4 h-4 mr-1" />
-                                {ind.evidencia ? 'Ver PDF' : 'Sin evidencia'}
+                                {ind.evidencia ? 'Ver Detalle' : 'Ver Info'}
                               </Button>
                             </TableCell>
                             <TableCell className="text-center">
@@ -676,6 +635,155 @@ export function IndicadoresModule({ onClose, dependencyId, dependencyName }: Ind
           </div>
         </div>
       </footer>
+
+      {/* Detail Modal */}
+      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl" style={{ color: '#582672' }}>
+              Detalle del Indicador
+            </DialogTitle>
+            <DialogDescription>
+              Información completa del indicador y su evidencia
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedIndicador && (
+            <div className="space-y-6 py-4">
+              {/* Indicador Info */}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-semibold text-gray-500">Nombre del Indicador</label>
+                  <p className="text-base font-medium text-gray-900 mt-1">{selectedIndicador.nombre}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-500">Unidad de Medida</label>
+                    <p className="text-base text-gray-900 mt-1">{selectedIndicador.unidad}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-500">Tipo</label>
+                    <p className="text-base text-gray-900 mt-1">{selectedIndicador.tipo}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-gray-500">Eje Estratégico</label>
+                  <p className="text-base text-gray-900 mt-1">{selectedIndicador.eje}</p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="text-center">
+                    <label className="text-sm font-semibold text-gray-500">Meta</label>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      {formatNumber(selectedIndicador.meta)}
+                    </p>
+                    <p className="text-xs text-gray-500">{selectedIndicador.unidad}</p>
+                  </div>
+                  <div className="text-center">
+                    <label className="text-sm font-semibold text-gray-500">Avance</label>
+                    <p className="text-2xl font-bold text-blue-600 mt-1">
+                      {formatNumber(selectedIndicador.avance)}
+                    </p>
+                    <p className="text-xs text-gray-500">{selectedIndicador.unidad}</p>
+                  </div>
+                  <div className="text-center">
+                    <label className="text-sm font-semibold text-gray-500">Cumplimiento</label>
+                    <p
+                      className="text-2xl font-bold mt-1"
+                      style={{ color: getStatusColor(selectedIndicador.cumplimiento) }}
+                    >
+                      {selectedIndicador.cumplimiento.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-semibold text-gray-500">Progreso Visual</label>
+                    <span className="text-sm text-gray-600">
+                      {selectedIndicador.cumplimiento.toFixed(1)}%
+                    </span>
+                  </div>
+                  <Progress
+                    value={selectedIndicador.cumplimiento > 100 ? 100 : selectedIndicador.cumplimiento}
+                    className="h-3"
+                    indicatorColor={getStatusColor(selectedIndicador.cumplimiento)}
+                  />
+                </div>
+              </div>
+
+              {/* Evidencia */}
+              <div className="border-t pt-4">
+                <label className="text-sm font-semibold text-gray-500">Evidencia Documental</label>
+                {selectedIndicador.evidencia ? (
+                  <div className="mt-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-8 h-8 text-blue-600" />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{selectedIndicador.evidencia}</p>
+                        <p className="text-sm text-gray-600 mt-1">Documento de respaldo cargado</p>
+                      </div>
+                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        <Download className="w-4 h-4 mr-2" />
+                        Descargar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 p-4 bg-gray-100 rounded-lg border border-gray-300">
+                    <div className="flex items-center gap-3">
+                      <XCircle className="w-8 h-8 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-700">Sin evidencia cargada</p>
+                        <p className="text-sm text-gray-600">No se ha subido documentación de respaldo</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Validation Status */}
+              <div className="border-t pt-4">
+                <label className="text-sm font-semibold text-gray-500">Estado de Validación</label>
+                <div className="mt-2 flex items-center gap-2">
+                  <Badge
+                    className="text-base px-4 py-2"
+                    style={{
+                      backgroundColor: `${getValidacionColor(selectedIndicador.estadoValidacion)}15`,
+                      color: getValidacionColor(selectedIndicador.estadoValidacion),
+                      border: `2px solid ${getValidacionColor(selectedIndicador.estadoValidacion)}`,
+                    }}
+                  >
+                    {selectedIndicador.estadoValidacion === 'Validado' && <CheckCircle className="w-4 h-4 mr-2" />}
+                    {selectedIndicador.estadoValidacion === 'Rechazado' && <XCircle className="w-4 h-4 mr-2" />}
+                    {selectedIndicador.estadoValidacion === 'En revisión' && <Clock className="w-4 h-4 mr-2" />}
+                    {selectedIndicador.estadoValidacion}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Observaciones */}
+              {selectedIndicador.observaciones && (
+                <div className="border-t pt-4">
+                  <label className="text-sm font-semibold text-gray-500">Observaciones</label>
+                  <div className="mt-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-gray-900">{selectedIndicador.observaciones}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDetailModal(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
